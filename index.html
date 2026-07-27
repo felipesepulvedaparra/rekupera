@@ -5,55 +5,898 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Rekupera</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css">
+<style>
+/* ── VARIABLES ── */
+:root {
+  --bg:#F5F3F0;--bg2:#FFFFFF;--bg3:#EEEBE6;
+  --text:#1A1917;--text2:#5C5A56;--text3:#9B9893;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --accent:#C8506A;--accent-l:#F8E8EC;--accent-d:#9B3050;
+  --r:12px;--r2:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:#111;}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  display:flex;justify-content:center;align-items:center;min-height:100vh;padding:16px;}
+
+/* ── PHONE SHELL ── */
+.phone{width:393px;height:852px;border-radius:50px;overflow:hidden;position:relative;
+  display:flex;flex-direction:column;
+  box-shadow:0 50px 100px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.07);
+  background:var(--bg);}
+.status-bar{padding:14px 28px 8px;display:flex;justify-content:space-between;
+  align-items:center;background:var(--bg2);flex-shrink:0;}
+.st-time{font-size:15px;font-weight:700;color:var(--text);}
+.st-icons{display:flex;gap:5px;align-items:center;}
+.st-icons i{font-size:14px;color:var(--text);}
+
+/* ── SCREENS ── */
+.screens-wrap{flex:1;overflow:hidden;position:relative;}
+.screen{position:absolute;inset:0;overflow-y:auto;background:var(--bg);
+  display:none;flex-direction:column;}
+.screen.active{display:flex;}
+.screen::-webkit-scrollbar{display:none;}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{background:var(--bg2);padding:8px 6px 20px;display:flex;
+  justify-content:space-around;border-top:1px solid var(--border);flex-shrink:0;}
+.nav-t{display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 14px;border-radius:12px;border:none;background:transparent;
+  cursor:pointer;min-width:56px;transition:all .15s;}
+.nav-t i{font-size:22px;color:var(--text3);}
+.nav-t span{font-size:10px;color:var(--text3);font-weight:500;}
+.nav-t.active i,.nav-t.active span{color:var(--accent);}
+.nav-t.active{background:color-mix(in srgb,var(--accent) 10%,transparent);}
+
+/* ── COMPONENTS ── */
+.btn-main{background:var(--accent);color:#fff;border:none;border-radius:var(--r2);
+  padding:15px;font-size:15px;font-weight:700;cursor:pointer;width:100%;
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s;}
+.btn-main:active{opacity:.82;}
+.card{background:var(--bg2);border-radius:var(--r2);overflow:hidden;}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;
+  border-radius:20px;font-size:10.5px;font-weight:700;}
+.section-lbl{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--text3);padding:14px 20px 8px;}
+.form-inp{width:100%;padding:13px 16px;border:1.5px solid var(--border2);
+  border-radius:var(--r);font-size:15px;color:var(--text);background:var(--bg);
+  outline:none;font-family:inherit;margin-bottom:10px;}
+.form-inp:focus{border-color:var(--accent);}
+.form-lbl{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:5px;display:block;}
+.spinner{width:32px;height:32px;border:3px solid var(--bg3);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-wrap{flex:1;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:14px;color:var(--text3);font-size:13px;}
+.empty-state{padding:32px 20px;display:flex;flex-direction:column;
+  align-items:center;gap:10px;color:var(--text3);text-align:center;}
+.empty-state i{font-size:36px;}
+
+/* ── LOGIN ── */
+#s-login{background:var(--bg2);align-items:center;justify-content:center;padding:32px 28px;}
+.logo-icon{width:72px;height:72px;border-radius:22px;
+  background:linear-gradient(145deg,#9B3050,#C8506A);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
+.logo-icon i{font-size:34px;color:#fff;}
+.logo-title{font-size:28px;font-weight:800;color:var(--text);letter-spacing:-.6px;text-align:center;}
+.logo-sub{font-size:13px;color:var(--text3);text-align:center;margin-bottom:28px;}
+.login-tabs{display:flex;gap:8px;margin-bottom:20px;}
+.login-tab{flex:1;padding:10px;border-radius:var(--r);border:1.5px solid var(--border2);
+  background:var(--bg);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;}
+.login-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.link-btn{background:none;border:none;color:var(--accent);font-size:13px;
+  font-weight:600;cursor:pointer;text-align:center;padding:8px;width:100%;}
+
+/* ── PROGRAMS ── */
+.prog-list{padding:14px 18px;display:flex;flex-direction:column;gap:12px;}
+.prog-opt{border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:transform .15s;}
+.prog-opt:active{transform:scale(.98);}
+.prog-inner{padding:18px 20px;display:flex;align-items:center;gap:14px;}
+.prog-icon{width:52px;height:52px;border-radius:var(--r);background:rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;}
+.prog-name{font-size:16px;font-weight:800;color:#fff;}
+.prog-desc{font-size:12px;color:rgba(255,255,255,.7);margin-top:3px;}
+
+/* ── HOME HERO ── */
+.hero{padding:22px 22px 26px;position:relative;overflow:hidden;flex-shrink:0;}
+.hero::before{content:'';position:absolute;width:160px;height:160px;border-radius:50%;
+  background:rgba(255,255,255,.07);top:-40px;right:-30px;}
+.hero-hi{font-size:13px;color:rgba(255,255,255,.65);margin-bottom:4px;}
+.hero-name{font-size:24px;font-weight:800;color:#fff;letter-spacing:-.5px;}
+.hero-prog{font-size:13px;color:rgba(255,255,255,.65);margin-top:3px;}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px;}
+.hero-stat{background:rgba(255,255,255,.13);border-radius:var(--r);padding:12px 10px;text-align:center;}
+.hero-stat-v{font-size:20px;font-weight:800;color:#fff;line-height:1;}
+.hero-stat-l{font-size:10px;color:rgba(255,255,255,.6);margin-top:3px;}
+.week-strip{display:flex;gap:6px;padding:14px 18px 0;overflow-x:auto;}
+.week-strip::-webkit-scrollbar{display:none;}
+.wday{display:flex;flex-direction:column;align-items:center;gap:4px;
+  min-width:40px;padding:8px 6px;border-radius:var(--r);}
+.wday .wd{font-size:10px;color:var(--text3);font-weight:600;}
+.wday .wn{font-size:15px;font-weight:700;color:var(--text2);}
+.wday.done{background:color-mix(in srgb,var(--accent) 12%,transparent);}
+.wday.done .wd,.wday.done .wn{color:var(--accent);}
+.wday.today{background:var(--accent);}
+.wday.today .wd,.wday.today .wn{color:#fff;}
+
+/* ── SESSION CARD ── */
+.sess-card{margin:14px 18px 0;background:var(--bg2);border-radius:var(--r2);overflow:hidden;}
+.sess-top{padding:16px 18px;display:flex;align-items:flex-start;gap:13px;}
+.sess-icon{width:46px;height:46px;border-radius:var(--r);display:flex;
+  align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.sess-title{font-size:15px;font-weight:700;color:var(--text);}
+.sess-meta{font-size:12px;color:var(--text3);margin-top:3px;}
+.sess-exs{padding:0 18px 16px;display:flex;flex-direction:column;gap:7px;}
+.sess-ex{background:var(--bg);border-radius:var(--r);padding:10px 12px;
+  display:flex;align-items:center;gap:10px;}
+.sess-ex-n{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;}
+.sess-ex-name{font-size:13px;font-weight:500;color:var(--text2);flex:1;}
+.sess-ex-sets{font-size:12px;color:var(--text3);}
+.sess-btn{padding:0 18px 18px;}
+.vic-pill{margin:12px 18px 0;background:var(--bg2);border-radius:var(--r2);
+  padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;}
+.vic-av{width:42px;height:42px;border-radius:50%;background:#1A1917;color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:13px;
+  font-weight:700;flex-shrink:0;position:relative;}
+.vic-dot{width:11px;height:11px;background:#22C55E;border-radius:50%;
+  border:2px solid var(--bg2);position:absolute;bottom:1px;right:1px;}
+
+/* ── PROGRESS ── */
+.screen-hdr{padding:20px 20px 16px;background:var(--bg2);border-bottom:1px solid var(--border);}
+.screen-hdr h2{font-size:20px;font-weight:800;color:var(--text);}
+.screen-hdr p{font-size:13px;color:var(--text3);margin-top:2px;}
+.photo-grid{padding:14px 18px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.photo-slot{border-radius:var(--r);aspect-ratio:3/4;overflow:hidden;position:relative;
+  background:var(--bg3);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;cursor:pointer;}
+.photo-slot img{width:100%;height:100%;object-fit:cover;}
+.photo-slot-lbl{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.42);
+  padding:6px 10px;font-size:11px;font-weight:700;color:#fff;}
+.photo-slot-week{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.42);
+  padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;}
+.measures-block{margin:12px 18px 0;background:var(--bg2);border-radius:var(--r2);overflow:hidden;}
+.mb-hdr{padding:14px 18px 10px;display:flex;align-items:center;justify-content:space-between;}
+.mb-title{font-size:14px;font-weight:700;color:var(--text);}
+.mb-add{background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--accent);}
+.measure-row{padding:12px 18px;border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;}
+.measure-ico{width:34px;height:34px;border-radius:10px;display:flex;
+  align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.measure-name{font-size:13px;color:var(--text2);flex:1;}
+.measure-val{font-size:16px;font-weight:800;color:var(--text);}
+.measure-delta{font-size:11px;font-weight:700;}
+.delta-pos{color:#3A8A5A;}
+.delta-neg{color:#C8506A;}
+
+/* ── VIDEOS ── */
+.vf-strip{display:flex;gap:6px;padding:12px 18px;overflow-x:auto;}
+.vf-strip::-webkit-scrollbar{display:none;}
+.vf-btn{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border2);
+  background:var(--bg2);font-size:12px;font-weight:600;color:var(--text2);
+  cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.vf-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.video-list{padding:0 18px 18px;display:flex;flex-direction:column;gap:10px;}
+.video-card{background:var(--bg2);border-radius:var(--r2);display:flex;
+  align-items:center;cursor:pointer;overflow:hidden;transition:opacity .15s;}
+.video-card:active{opacity:.85;}
+.video-thumb{width:96px;height:70px;flex-shrink:0;display:flex;
+  align-items:center;justify-content:center;font-size:26px;position:relative;}
+.video-play{position:absolute;inset:0;background:rgba(0,0,0,.28);
+  display:flex;align-items:center;justify-content:center;}
+.video-play i{font-size:22px;color:#fff;}
+.video-info{flex:1;padding:11px 14px;}
+.video-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.video-meta{font-size:11px;color:var(--text3);}
+
+/* ── CHAT ── */
+#s-chat{flex-direction:column;}
+.chat-hdr{background:var(--bg2);padding:14px 18px;display:flex;align-items:center;
+  gap:12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.chat-av{width:42px;height:42px;border-radius:50%;background:#1A1917;color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:13px;
+  font-weight:700;flex-shrink:0;position:relative;}
+.chat-online{width:11px;height:11px;background:#22C55E;border-radius:50%;
+  border:2px solid var(--bg2);position:absolute;bottom:1px;right:1px;}
+.chat-wa{margin-left:auto;background:#25D366;color:#fff;border:none;
+  border-radius:var(--r);padding:8px 12px;font-size:12px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.msgs{flex:1;overflow-y:auto;padding:14px 16px;
+  display:flex;flex-direction:column;gap:10px;background:var(--bg);}
+.msgs::-webkit-scrollbar{display:none;}
+.msg-row{display:flex;gap:7px;align-items:flex-end;max-width:82%;}
+.msg-row.me{flex-direction:row-reverse;align-self:flex-end;}
+.msg-av2{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.msg-av2.vic{background:#1A1917;color:#fff;}
+.msg-av2.me{background:var(--bg3);color:var(--text2);}
+.bub{padding:10px 14px;border-radius:18px;font-size:13.5px;line-height:1.55;}
+.msg-row.vic .bub{background:var(--bg2);color:var(--text);border-bottom-left-radius:4px;}
+.msg-row.me .bub{background:var(--accent);color:#fff;border-bottom-right-radius:4px;}
+.msg-t{font-size:10px;color:var(--text3);margin-top:3px;}
+.msg-row.me .msg-t{text-align:right;}
+.qchips{display:flex;gap:6px;flex-wrap:wrap;padding:8px 16px;background:var(--bg);}
+.qchip{background:var(--bg2);border:1.5px solid var(--border2);border-radius:16px;
+  padding:7px 12px;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;}
+.chat-inp-row{background:var(--bg2);padding:10px 14px 12px;display:flex;gap:8px;
+  align-items:center;border-top:1px solid var(--border);flex-shrink:0;}
+.chat-inp{flex:1;padding:10px 14px;border-radius:22px;border:1.5px solid var(--border2);
+  background:var(--bg);font-size:14px;color:var(--text);outline:none;}
+.chat-inp:focus{border-color:var(--accent);}
+.send-btn{width:40px;height:40px;border-radius:50%;background:var(--accent);
+  border:none;color:#fff;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;}
+
+/* ── COACH ── */
+#s-coach{background:#0F0E0D;}
+.coach-hdr{background:#0F0E0D;padding:20px 22px 16px;
+  display:flex;align-items:center;justify-content:space-between;}
+.coach-hdr h2{font-size:22px;font-weight:800;color:#fff;}
+.coach-hdr p{font-size:13px;color:rgba(255,255,255,.4);margin-top:2px;}
+.coach-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 18px 16px;}
+.cs-card{background:rgba(255,255,255,.06);border-radius:var(--r);padding:14px;text-align:center;}
+.cs-val{font-size:22px;font-weight:800;color:#fff;}
+.cs-lbl{font-size:10px;color:rgba(255,255,255,.4);margin-top:3px;}
+.coach-lbl{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:rgba(255,255,255,.3);padding:14px 18px 8px;}
+.clients-list{padding:0 18px 14px;display:flex;flex-direction:column;gap:10px;}
+.client-card{border-radius:var(--r2);overflow:hidden;cursor:pointer;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);}
+.cc-top{padding:14px 16px;display:flex;align-items:center;gap:12px;}
+.cc-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;}
+.cc-name{font-size:14px;font-weight:700;color:#fff;}
+.cc-prog{font-size:11px;color:rgba(255,255,255,.45);margin-top:2px;}
+.cc-foot{padding:8px 16px 14px;border-top:1px solid rgba(255,255,255,.06);
+  display:flex;gap:16px;}
+.cc-m-val{font-size:14px;font-weight:700;color:#fff;}
+.cc-m-lbl{font-size:10px;color:rgba(255,255,255,.35);}
+.upload-section{padding:0 18px 24px;display:flex;flex-direction:column;gap:10px;}
+.dark-inp{width:100%;padding:12px 14px;border:1.5px solid rgba(255,255,255,.12);
+  border-radius:var(--r);font-size:14px;color:#fff;background:rgba(255,255,255,.06);
+  outline:none;font-family:inherit;}
+.dark-inp:focus{border-color:#C8506A;}
+.upload-area{border:2px dashed rgba(255,255,255,.15);border-radius:var(--r2);
+  padding:22px;display:flex;flex-direction:column;align-items:center;gap:8px;
+  cursor:pointer;background:rgba(255,255,255,.03);}
+.upload-area i{font-size:30px;color:#C8506A;}
+.upload-area p{font-size:13px;color:rgba(255,255,255,.4);text-align:center;}
+.uprog-wrap{width:100%;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;display:none;}
+.uprog-bar{height:100%;background:#C8506A;border-radius:3px;transition:width .3s;}
+
+/* ── MODAL ── */
+.modal-ov{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:100;
+  display:none;align-items:flex-end;}
+.modal-ov.open{display:flex;}
+.modal-sh{background:var(--bg2);width:100%;border-radius:28px 28px 0 0;
+  padding:0 0 28px;animation:su .3s ease;max-height:92%;}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-hnd{width:38px;height:4px;background:var(--bg3);border-radius:2px;margin:12px auto 18px;}
+.modal-tit{font-size:18px;font-weight:800;color:var(--text);padding:0 22px 16px;}
+.modal-bd{padding:0 22px;display:flex;flex-direction:column;gap:12px;
+  overflow-y:auto;max-height:55vh;}
+.modal-bd::-webkit-scrollbar{display:none;}
+.m-inp{width:100%;padding:12px 14px;border:1.5px solid var(--border2);border-radius:var(--r);
+  font-size:16px;font-weight:700;color:var(--text);background:var(--bg);outline:none;font-family:inherit;}
+.m-inp:focus{border-color:var(--accent);}
+.modal-save{margin:18px 22px 0;background:var(--accent);color:#fff;border:none;
+  border-radius:var(--r2);padding:15px;font-size:16px;font-weight:700;cursor:pointer;
+  width:calc(100% - 44px);display:flex;align-items:center;justify-content:center;gap:8px;}
+.photo-upload-lbl{display:flex;align-items:center;gap:8px;padding:11px 14px;
+  border:1.5px dashed var(--border2);border-radius:var(--r);cursor:pointer;
+  font-size:14px;color:var(--text2);background:var(--bg);}
+#preview-wrap{display:none;margin-top:8px;border-radius:12px;overflow:hidden;}
+#preview-wrap img{width:100%;border-radius:12px;}
+
+/* ── VIDEO MODAL ── */
+#modal-video .modal-sh{height:80%;}
+.video-modal-inner{padding:0 20px 20px;display:flex;flex-direction:column;gap:12px;
+  height:calc(100% - 40px);}
+#vm-title{font-size:18px;font-weight:800;color:var(--text);}
+#vm-player{width:100%;border-radius:14px;background:#000;flex-shrink:0;max-height:220px;}
+#vm-desc{font-size:14px;color:var(--text2);line-height:1.6;overflow-y:auto;}
+
+/* ── TOAST ── */
+.toast{position:absolute;bottom:88px;left:18px;right:18px;background:var(--text);
+  color:#fff;padding:13px 16px;border-radius:var(--r2);font-size:13.5px;font-weight:500;
+  display:flex;gap:10px;align-items:center;opacity:0;transform:translateY(8px);
+  transition:all .25s;z-index:200;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast i{flex-shrink:0;font-size:16px;}
+</style>
 </head>
 <body>
 <div class="phone" id="app">
+
+  <!-- STATUS BAR -->
   <div class="status-bar">
-    <span class="st-time" id="st-time">9:41</span>
+    <span class="st-time" id="clock">9:41</span>
     <div class="st-icons"><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></div>
   </div>
-  <div class="screens-wrap" id="screens-wrap">
-    <!-- Screens injected by JS -->
+
+  <!-- SCREENS -->
+  <div class="screens-wrap" id="sw"></div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav" id="bnav" style="display:none;">
+    <button class="nav-t active" onclick="goTab('home',this)"><i class="ti ti-home"></i><span>Inicio</span></button>
+    <button class="nav-t" onclick="goTab('progreso',this)"><i class="ti ti-chart-line"></i><span>Progreso</span></button>
+    <button class="nav-t" onclick="goTab('videos',this)"><i class="ti ti-player-play"></i><span>Ejercicios</span></button>
+    <button class="nav-t" onclick="goTab('chat',this)"><i class="ti ti-message-circle"></i><span>Victoria</span></button>
   </div>
-  <div class="bottom-nav" id="bottom-nav" style="display:none;">
-    <button class="nav-t active" onclick="goTab('home',this)" data-tab="home"><i class="ti ti-home"></i><span>Inicio</span></button>
-    <button class="nav-t" onclick="goTab('progreso',this)" data-tab="progreso"><i class="ti ti-chart-line"></i><span>Progreso</span></button>
-    <button class="nav-t" onclick="goTab('videos',this)" data-tab="videos"><i class="ti ti-player-play"></i><span>Ejercicios</span></button>
-    <button class="nav-t" onclick="goTab('chat',this)" data-tab="chat"><i class="ti ti-message-circle"></i><span>Victoria</span></button>
-  </div>
-  <div class="modal-ov" id="modal-medidas" onclick="closeModal('modal-medidas',event)">
+
+  <!-- MODAL MEDIDAS -->
+  <div class="modal-ov" id="modal-med" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="modal-sh">
       <div class="modal-hnd"></div>
-      <div class="modal-tit">Registrar medidas</div>
-      <div class="modal-bd" id="modal-medidas-bd">
-        <div class="inp-grp"><div class="inp-lbl">PESO (kg)</div><input class="m-inp" id="inp-peso" type="number" placeholder="67.5" step="0.1"></div>
-        <div class="inp-grp"><div class="inp-lbl">CINTURA (cm)</div><input class="m-inp" id="inp-cintura" type="number" placeholder="76" step="0.5"></div>
-        <div class="inp-grp"><div class="inp-lbl">CADERA (cm)</div><input class="m-inp" id="inp-cadera" type="number" placeholder="94" step="0.5"></div>
-        <div class="inp-grp"><div class="inp-lbl">MUSLO (cm)</div><input class="m-inp" id="inp-muslo" type="number" placeholder="52" step="0.5"></div>
-        <div class="inp-grp"><div class="inp-lbl">FOTO DE PROGRESO (opcional)</div>
-          <label class="photo-upload-btn" for="inp-foto"><i class="ti ti-camera"></i> Seleccionar foto</label>
-          <input type="file" id="inp-foto" accept="image/*" capture="user" style="display:none" onchange="previewPhoto(this)">
-          <div id="photo-preview" style="display:none;margin-top:8px;border-radius:12px;overflow:hidden;"><img id="preview-img" style="width:100%;border-radius:12px;"></div>
+      <div class="modal-tit">Registrar medidas de hoy</div>
+      <div class="modal-bd">
+        <div><label class="form-lbl">PESO (kg)</label><input class="m-inp" id="i-peso" type="number" placeholder="67.5" step="0.1"></div>
+        <div><label class="form-lbl">CINTURA (cm)</label><input class="m-inp" id="i-cintura" type="number" placeholder="76" step="0.5"></div>
+        <div><label class="form-lbl">CADERA (cm)</label><input class="m-inp" id="i-cadera" type="number" placeholder="94" step="0.5"></div>
+        <div><label class="form-lbl">MUSLO (cm)</label><input class="m-inp" id="i-muslo" type="number" placeholder="52" step="0.5"></div>
+        <div>
+          <label class="form-lbl">FOTO DE PROGRESO (opcional)</label>
+          <label class="photo-upload-lbl" for="i-foto"><i class="ti ti-camera"></i> Seleccionar foto</label>
+          <input type="file" id="i-foto" accept="image/*" capture="user" style="display:none" onchange="previewFoto(this)">
+          <div id="preview-wrap"><img id="preview-img"></div>
         </div>
       </div>
-      <button class="modal-save" id="btn-guardar-medidas" onclick="guardarMedidas()"><i class="ti ti-device-floppy"></i> Guardar medidas</button>
+      <button class="modal-save" id="btn-guardar" onclick="guardarMedidas()">
+        <i class="ti ti-device-floppy"></i> Guardar medidas
+      </button>
     </div>
   </div>
-  <div class="modal-ov" id="modal-video" onclick="closeModal('modal-video',event)">
-    <div class="modal-sh" style="height:85%;">
+
+  <!-- MODAL VIDEO -->
+  <div class="modal-ov" id="modal-video" onclick="if(event.target===this){this.classList.remove('open');document.getElementById('vm-player').pause()}">
+    <div class="modal-sh">
       <div class="modal-hnd"></div>
-      <div id="video-player-content" style="padding:0 20px 24px;height:calc(100% - 40px);display:flex;flex-direction:column;gap:14px;">
-        <div id="video-title-modal" style="font-size:18px;font-weight:800;color:var(--text);"></div>
-        <video id="video-player" controls style="width:100%;border-radius:14px;background:#000;flex-shrink:0;max-height:220px;" playsinline></video>
-        <div id="video-desc-modal" style="font-size:14px;color:var(--text2);line-height:1.6;overflow-y:auto;"></div>
+      <div class="video-modal-inner">
+        <div id="vm-title"></div>
+        <video id="vm-player" controls playsinline></video>
+        <div id="vm-desc"></div>
       </div>
     </div>
   </div>
+
+  <!-- TOAST -->
   <div class="toast" id="toast"><i class="ti ti-sparkles"></i><span id="tmsg"></span></div>
 </div>
-<script src="config.js"></script>
-<script src="app.js"></script>
+
+<!-- SUPABASE CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// ══════════════════════════════════════════════════════
+// ⚠️  REEMPLAZA ESTOS DOS VALORES CON LOS TUYOS
+// ══════════════════════════════════════════════════════
+const SB_URL  = 'https://TU_PROYECTO.supabase.co'
+const SB_KEY  = 'TU_ANON_KEY_AQUI'
+// ══════════════════════════════════════════════════════
+
+const sb = window.supabase.createClient(SB_URL, SB_KEY)
+
+// ── ESTADO ──
+let USER = null, PROFILE = null, PROG = 'peso', ALL_VIDEOS = []
+
+const PC = {
+  embarazada:{a:'#7C5CBF',al:'#EDE8F8',ad:'#5A3EA0',e:'🤰',l:'Embarazada',   g:'linear-gradient(145deg,#5A3EA0,#7C5CBF)'},
+  postparto: {a:'#C8506A',al:'#F8E8EC',ad:'#9B3050',e:'👶',l:'Post-parto',   g:'linear-gradient(145deg,#9B3050,#C8506A)'},
+  lesion:    {a:'#2A7AB5',al:'#E4F0FA',ad:'#1A5A8A',e:'🦴',l:'Post-lesión',  g:'linear-gradient(145deg,#1A5A8A,#2A7AB5)'},
+  mayor:     {a:'#3A8A5A',al:'#E2F4EA',ad:'#2A6A40',e:'🧓',l:'Adulto mayor', g:'linear-gradient(145deg,#2A6A40,#3A8A5A)'},
+  peso:      {a:'#D4783A',al:'#FAEEE4',ad:'#A8501C',e:'✨',l:'Bajar de peso', g:'linear-gradient(145deg,#A8501C,#D4783A)'},
+}
+
+const SESS = {
+  embarazada:[['Caminata suave','15 min'],['Sentadilla pelviana','2×12'],['Respiración diafragmática','3×10'],['Estiramiento de cadera','5 min']],
+  postparto: [['Activación suelo pélvico','3×10'],['Respiración hipopresiva','3×5'],['Puente de glúteos','3×12'],['Estiramiento abdominal','2×30s'],['Relajación','5 min']],
+  lesion:    [['Movilización pasiva','10 min'],['Cuádriceps isométrico','3×15'],['Propiocepción','3×20s'],['Hielo y elevación','10 min']],
+  mayor:     [['Marcha en el lugar','5 min'],['Sentadilla con silla','3×10'],['Equilibrio unipodal','3×20s'],['Fortalecimiento brazos','3×10'],['Estiramiento','5 min']],
+  peso:      [['Caminata activa','20 min'],['Sentadillas','3×15'],['Plancha abdominal','3×30s'],['Estocadas','3×12'],['Cierre y respiración','5 min']],
+}
+
+const SESS_TITLE = {
+  embarazada:'Movilidad y respiración prenatal',
+  postparto:'Suelo pélvico — activación',
+  lesion:'Movilidad articular — fase I',
+  mayor:'Equilibrio y fuerza funcional',
+  peso:'Cardio + Core — Semana 1',
+}
+
+// ── UTILIDADES ──
+function toast(msg){ const t=document.getElementById('toast'); document.getElementById('tmsg').textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3200) }
+function accent(p){ const c=PC[p]||PC.peso; document.documentElement.style.setProperty('--accent',c.a); document.documentElement.style.setProperty('--accent-l',c.al); document.documentElement.style.setProperty('--accent-d',c.ad) }
+function screen(id){ return document.getElementById('s-'+id) }
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); const s=screen(id); if(s)s.classList.add('active') }
+function sw(html){ document.getElementById('sw').innerHTML=html }
+function time(ts){ if(!ts)return ''; const d=new Date(ts); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0') }
+
+function goTab(id,btn){
+  document.querySelectorAll('.nav-t').forEach(t=>t.classList.remove('active'))
+  if(btn)btn.classList.add('active')
+  renderScreen(id)
+}
+
+function updateClock(){ const n=new Date(); const el=document.getElementById('clock'); if(el)el.textContent=n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0') }
+
+// ── INIT ──
+window.addEventListener('load', async ()=>{
+  updateClock(); setInterval(updateClock,30000)
+  renderScreen('login')
+  try {
+    const {data:{session}} = await sb.auth.getSession()
+    if(session){ USER=session.user; await loadProfile() }
+  } catch(e){ console.error('Supabase error:',e); toast('Error conectando con el servidor') }
+})
+
+// ── RENDER ──
+function renderScreen(name){
+  const fns = {login:rLogin, programs:rPrograms, home:rHome, progreso:rProgreso, videos:rVideos, chat:rChat, coach:rCoach}
+  sw('<div class="screen active" id="s-'+name+'">'+(fns[name]?fns[name]():'')+'</div>')
+  if(name==='progreso') setTimeout(loadMedidas,100)
+  if(name==='videos')   setTimeout(()=>loadVideos('todos'),100)
+  if(name==='chat')     setTimeout(loadMsgs,100)
+  if(name==='coach')    setTimeout(loadCoach,100)
+}
+
+// ── LOAD PROFILE ──
+async function loadProfile(){
+  try {
+    const {data:p,error} = await sb.from('profiles').select('*').eq('id',USER.id).single()
+    if(error||!p){ renderScreen('programs'); document.getElementById('bnav').style.display='none'; return }
+    PROFILE=p
+    if(p.es_victoria){ renderScreen('coach'); document.getElementById('bnav').style.display='none'; return }
+    if(!p.programa){ renderScreen('programs'); document.getElementById('bnav').style.display='none'; return }
+    PROG=p.programa; accent(PROG)
+    document.getElementById('bnav').style.display='flex'
+    renderScreen('home')
+  } catch(e){ console.error(e) }
+}
+
+// ── LOGIN ──
+function rLogin(){
+  return `<div style="background:var(--bg2);flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;">
+    <div class="logo-icon"><i class="ti ti-activity"></i></div>
+    <div class="logo-title">Rekupera</div>
+    <div class="logo-sub" style="margin-top:8px;">Preparación física guiada por<br>Victoria Cartes Campos</div>
+    <div style="width:100%;margin-top:8px;">
+      <label class="form-lbl">CORREO ELECTRÓNICO</label>
+      <input class="form-inp" id="l-email" type="email" placeholder="tu@correo.cl" autocomplete="email">
+      <label class="form-lbl">CONTRASEÑA</label>
+      <input class="form-inp" id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+      <button class="btn-main" style="margin-bottom:10px;" onclick="doLogin()"><i class="ti ti-login"></i> Ingresar</button>
+      <div style="text-align:center;font-size:13px;color:var(--text3);margin-bottom:10px;">¿No tienes cuenta?</div>
+      <button class="btn-main" style="background:var(--bg3);color:var(--text2);" onclick="renderScreen('register')"><i class="ti ti-user-plus"></i> Crear cuenta nueva</button>
+    </div>
+  </div>`
+}
+
+async function doLogin(){
+  const email=document.getElementById('l-email')?.value?.trim()
+  const pass=document.getElementById('l-pass')?.value
+  if(!email||!pass)return toast('Completa correo y contraseña')
+  toast('Ingresando…')
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass})
+  if(error)return toast('Error: '+error.message)
+  USER=data.user; await loadProfile()
+}
+
+function rRegister(){
+  return `<div style="background:var(--bg2);flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 24px;">
+    <div class="logo-icon"><i class="ti ti-activity"></i></div>
+    <div class="logo-title">Crear cuenta</div>
+    <div style="width:100%;margin-top:20px;">
+      <label class="form-lbl">NOMBRE COMPLETO</label>
+      <input class="form-inp" id="r-nom" type="text" placeholder="Tu nombre completo">
+      <label class="form-lbl">CORREO ELECTRÓNICO</label>
+      <input class="form-inp" id="r-email" type="email" placeholder="tu@correo.cl">
+      <label class="form-lbl">CONTRASEÑA</label>
+      <input class="form-inp" id="r-pass" type="password" placeholder="Mínimo 6 caracteres">
+      <button class="btn-main" style="margin-bottom:10px;" onclick="doRegister()"><i class="ti ti-user-plus"></i> Crear cuenta</button>
+      <button class="link-btn" onclick="renderScreen('login')">← Volver al inicio</button>
+    </div>
+  </div>`
+}
+
+// Register screen needs special handling
+const origRenderScreen = renderScreen
+window.renderScreen = function(name){
+  if(name==='register'){
+    sw('<div class="screen active" id="s-register">'+rRegister()+'</div>')
+    return
+  }
+  origRenderScreen(name)
+}
+
+async function doRegister(){
+  const nom=document.getElementById('r-nom')?.value?.trim()
+  const email=document.getElementById('r-email')?.value?.trim()
+  const pass=document.getElementById('r-pass')?.value
+  if(!nom||!email||!pass)return toast('Completa todos los campos')
+  if(pass.length<6)return toast('La contraseña debe tener al menos 6 caracteres')
+  toast('Creando cuenta…')
+  const {data,error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:nom}}})
+  if(error)return toast('Error: '+error.message)
+  USER=data.user
+  await sb.from('profiles').upsert({id:USER.id,nombre:nom,email,programa:null,es_victoria:false})
+  toast('¡Cuenta creada! Elige tu programa 🎉')
+  document.getElementById('bnav').style.display='none'
+  renderScreen('programs')
+}
+
+// ── PROGRAMS ──
+function rPrograms(){
+  const items=Object.entries(PC).map(([k,p])=>`
+    <div class="prog-opt" onclick="selectProg('${k}')" style="background:${p.g};">
+      <div class="prog-inner">
+        <div class="prog-icon">${p.e}</div>
+        <div><div class="prog-name">${p.l}</div><div class="prog-desc">${progDesc(k)}</div></div>
+        <i class="ti ti-arrow-right" style="margin-left:auto;font-size:22px;color:rgba(255,255,255,.5);flex-shrink:0;"></i>
+      </div>
+    </div>`).join('')
+  return `<div style="background:var(--bg2);padding:20px 22px 18px;border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div style="font-size:20px;font-weight:800;color:var(--text);">¿Cuál es tu situación?</div>
+    <div style="font-size:13px;color:var(--text3);margin-top:3px;">Victoria diseñará tu programa según tu etapa</div>
+  </div><div class="prog-list">${items}</div>`
+}
+
+function progDesc(k){return{embarazada:'Ejercicio seguro según trimestre',postparto:'Recuperación suelo pélvico y diástasis',lesion:'Rodilla, hombro, tobillo, lumbar',mayor:'Movilidad, equilibrio y fuerza funcional',peso:'Cardio, fuerza y hábitos saludables'}[k]||''}
+
+async function selectProg(p){
+  PROG=p; accent(p)
+  if(USER) await sb.from('profiles').upsert({id:USER.id,programa:p})
+  document.getElementById('bnav').style.display='flex'
+  renderScreen('home')
+}
+
+// ── HOME ──
+function rHome(){
+  const p=PC[PROG], nom=(PROFILE?.nombre||'Bienvenida').split(' ')[0]
+  const today=new Date(), days=['L','M','X','J','V','S','D']
+  const strip=Array.from({length:7},(_,i)=>{
+    const d=new Date(today); d.setDate(today.getDate()-today.getDay()+(i===6?0:i+1))
+    const isToday=d.toDateString()===today.toDateString()
+    const isPast=d<today&&!isToday
+    return `<div class="wday ${isPast?'done':''} ${isToday?'today':''}"><span class="wd">${days[i]}</span><span class="wn">${d.getDate()}</span></div>`
+  }).join('')
+  const exs=(SESS[PROG]||SESS.peso).map((e,i)=>`
+    <div class="sess-ex">
+      <div class="sess-ex-n" style="background:${p.al};color:${p.a};">${i+1}</div>
+      <span class="sess-ex-name">${e[0]}</span><span class="sess-ex-sets">${e[1]}</span>
+    </div>`).join('')
+  return `
+  <div class="hero" style="background:${p.g};">
+    <div class="hero-hi">Buenos días ☀️</div>
+    <div class="hero-name">${nom}</div>
+    <div class="hero-prog">${p.e} ${p.l} · Semana 1</div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-v">1</div><div class="hero-stat-l">Semana</div></div>
+      <div class="hero-stat"><div class="hero-stat-v">0</div><div class="hero-stat-l">Sesiones</div></div>
+      <div class="hero-stat"><div class="hero-stat-v">—</div><div class="hero-stat-l">Adherencia</div></div>
+    </div>
+  </div>
+  <div class="week-strip">${strip}</div>
+  <div class="section-lbl">Sesión de hoy</div>
+  <div class="sess-card">
+    <div class="sess-top">
+      <div class="sess-icon" style="background:${p.al};color:${p.a};"><i class="ti ti-flame"></i></div>
+      <div>
+        <div class="sess-title">${SESS_TITLE[PROG]||'Sesión del día'}</div>
+        <div class="sess-meta">Programa personalizado · Semana 1</div>
+        <div style="margin-top:8px;"><span class="tag" style="background:${p.al};color:${p.a};">Hoy</span></div>
+      </div>
+    </div>
+    <div class="sess-exs">${exs}</div>
+    <div class="sess-btn">
+      <button class="btn-main" onclick="toast('¡Sesión iniciada! 💪 Victoria está al tanto.')"><i class="ti ti-player-play"></i> Comenzar sesión</button>
+    </div>
+  </div>
+  <div class="section-lbl">Tu especialista</div>
+  <div class="vic-pill" onclick="goTab('chat',document.querySelectorAll('.nav-t')[3])">
+    <div class="vic-av">VC<div class="vic-dot"></div></div>
+    <div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);">Victoria Cartes Campos</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:2px;">Preparadora física · en línea</div>
+    </div>
+    <div style="margin-left:auto;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">1</div>
+  </div>
+  <div style="height:22px;"></div>`
+}
+
+// ── PROGRESO ──
+function rProgreso(){
+  const p=PC[PROG]
+  return `
+  <div class="screen-hdr"><h2>Mi progreso</h2><p>Fotos y medidas semana a semana</p></div>
+  <div class="photo-grid" id="photo-grid">
+    <div class="photo-slot"><div class="empty-state" style="padding:16px;"><i class="ti ti-camera-off" style="font-size:24px;"></i><p style="font-size:11px;">Sin foto de inicio</p></div><div class="photo-slot-week">Inicio</div><div class="photo-slot-lbl">Antes</div></div>
+    <div class="photo-slot" style="background:color-mix(in srgb,${p.a} 8%,var(--bg3));" onclick="document.getElementById('modal-med').classList.add('open')">
+      <div class="empty-state" style="padding:16px;"><i class="ti ti-camera" style="font-size:24px;color:${p.a};"></i><p style="font-size:11px;color:${p.a};">Subir foto hoy</p></div>
+      <div class="photo-slot-week">Hoy</div><div class="photo-slot-lbl">Ahora</div>
+    </div>
+  </div>
+  <button class="btn-main" style="margin:12px 18px 0;width:calc(100% - 36px);" onclick="document.getElementById('modal-med').classList.add('open')"><i class="ti ti-plus"></i> Registrar medidas de hoy</button>
+  <div class="measures-block">
+    <div class="mb-hdr"><span class="mb-title">Medidas corporales</span><button class="mb-add" onclick="document.getElementById('modal-med').classList.add('open')">+ Registrar</button></div>
+    <div id="medidas-list"><div class="empty-state"><i class="ti ti-ruler"></i><p>Sin medidas aún.<br>¡Empieza hoy!</p></div></div>
+  </div>
+  <div style="height:22px;"></div>`
+}
+
+async function loadMedidas(){
+  if(!USER)return
+  const p=PC[PROG]
+  const {data}=await sb.from('medidas').select('*').eq('user_id',USER.id).order('created_at',{ascending:false}).limit(20)
+  const list=document.getElementById('medidas-list')
+  if(!list)return
+  if(!data||data.length===0){list.innerHTML='<div class="empty-state"><i class="ti ti-ruler"></i><p>Sin medidas aún.<br>¡Empieza hoy!</p></div>';return}
+  const lat=data[0], first=data[data.length-1]
+  const rows=[
+    ['ti-weight','Peso',lat.peso,first.peso,'kg'],
+    ['ti-circle','Cintura',lat.cintura,first.cintura,'cm'],
+    ['ti-circle-dotted','Cadera',lat.cadera,first.cadera,'cm'],
+    ['ti-minus','Muslo',lat.muslo,first.muslo,'cm'],
+  ]
+  list.innerHTML=rows.filter(r=>r[2]).map(([ico,nam,val,ini,u])=>{
+    const diff=val&&ini?(val-ini).toFixed(1):null
+    const isGood=diff&&parseFloat(diff)<0
+    return `<div class="measure-row">
+      <div class="measure-ico" style="background:${p.al};color:${p.a};"><i class="ti ${ico}"></i></div>
+      <span class="measure-name">${nam}</span>
+      <div><div class="measure-val">${val} ${u}</div>${diff?`<div class="measure-delta ${isGood?'delta-pos':'delta-neg'}">${isGood?'↓':'↑'} ${Math.abs(diff)} ${u}</div>`:''}</div>
+    </div>`
+  }).join('')
+
+  // Load photos
+  const {data:fotos}=await sb.from('fotos_progreso').select('*').eq('user_id',USER.id).order('created_at',{ascending:true})
+  if(fotos&&fotos.length>0){
+    const grid=document.getElementById('photo-grid')
+    if(!grid)return
+    const u1=sb.storage.from('fotos-progreso').getPublicUrl(fotos[0].path).data.publicUrl
+    const u2=sb.storage.from('fotos-progreso').getPublicUrl(fotos[fotos.length-1].path).data.publicUrl
+    grid.innerHTML=`
+      <div class="photo-slot"><img src="${u1}"><div class="photo-slot-week">Inicio</div><div class="photo-slot-lbl">Antes</div></div>
+      <div class="photo-slot"><img src="${u2}"><div class="photo-slot-week">Hoy</div><div class="photo-slot-lbl">Ahora</div></div>`
+  }
+}
+
+function previewFoto(inp){
+  const f=inp.files[0]; if(!f)return
+  const r=new FileReader()
+  r.onload=e=>{document.getElementById('preview-img').src=e.target.result;document.getElementById('preview-wrap').style.display='block'}
+  r.readAsDataURL(f)
+}
+
+async function guardarMedidas(){
+  if(!USER)return toast('Debes estar logueada')
+  const peso=parseFloat(document.getElementById('i-peso')?.value)||null
+  const cin=parseFloat(document.getElementById('i-cintura')?.value)||null
+  const cad=parseFloat(document.getElementById('i-cadera')?.value)||null
+  const mus=parseFloat(document.getElementById('i-muslo')?.value)||null
+  const foto=document.getElementById('i-foto')?.files?.[0]
+  const btn=document.getElementById('btn-guardar')
+  if(btn){btn.innerHTML='<i class="ti ti-loader-2"></i> Guardando…';btn.disabled=true}
+  const {error}=await sb.from('medidas').insert({user_id:USER.id,peso,cintura:cin,cadera:cad,muslo:mus})
+  if(error){toast('Error: '+error.message);if(btn){btn.innerHTML='<i class="ti ti-device-floppy"></i> Guardar medidas';btn.disabled=false};return}
+  if(foto){
+    const ext=foto.name.split('.').pop()
+    const path=`${USER.id}/${Date.now()}.${ext}`
+    const {error:ue}=await sb.storage.from('fotos-progreso').upload(path,foto)
+    if(!ue)await sb.from('fotos_progreso').insert({user_id:USER.id,path})
+  }
+  document.getElementById('modal-med').classList.remove('open')
+  if(btn){btn.innerHTML='<i class="ti ti-device-floppy"></i> Guardar medidas';btn.disabled=false}
+  toast('Medidas guardadas. Victoria las verá ✓')
+  setTimeout(loadMedidas,500)
+}
+
+// ── VIDEOS ──
+function rVideos(){
+  const cats=[['todos','Todos'],['embarazada','🤰 Embarazo'],['postparto','👶 Post-parto'],['lesion','🦴 Lesión'],['mayor','🧓 Adulto mayor'],['peso','✨ Peso']]
+  return `
+  <div class="screen-hdr"><h2>Ejercicios en video</h2><p>Videos de Victoria para tu programa</p></div>
+  <div class="vf-strip">${cats.map(([k,l],i)=>`<button class="vf-btn ${i===0?'active':''}" onclick="filterVids('${k}',this)">${l}</button>`).join('')}</div>
+  <div class="video-list" id="video-list"><div class="loading-wrap"><div class="spinner"></div><span>Cargando videos…</span></div></div>`
+}
+
+async function loadVideos(cat='todos'){
+  const list=document.getElementById('video-list')
+  if(!list)return
+  let q=sb.from('videos').select('*').order('created_at',{ascending:false})
+  if(cat!=='todos')q=q.eq('categoria',cat)
+  const {data,error}=await q
+  if(error||!data||data.length===0){
+    list.innerHTML=`<div class="empty-state"><i class="ti ti-video-off"></i><p>No hay videos en esta categoría aún.<br>Victoria los irá subiendo.</p></div>`
+    return
+  }
+  ALL_VIDEOS=data
+  list.innerHTML=data.map(v=>{
+    const p=PC[v.categoria]||PC.peso
+    return `<div class="video-card" onclick="openVid('${v.id}')">
+      <div class="video-thumb" style="background:${p.al};">
+        <span>${p.e}</span>
+        <div class="video-play"><i class="ti ti-player-play"></i></div>
+      </div>
+      <div class="video-info">
+        <div class="video-title">${v.titulo}</div>
+        <div class="video-meta">${v.duracion||''} ${v.nivel?'· '+v.nivel:''}</div>
+        <div style="margin-top:5px;"><span class="tag" style="background:${p.al};color:${p.a};">${p.e} ${p.l}</span></div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+function filterVids(cat,btn){
+  document.querySelectorAll('.vf-btn').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active'); loadVideos(cat)
+}
+
+async function openVid(id){
+  const v=ALL_VIDEOS.find(x=>x.id===id); if(!v)return
+  const {data:{publicUrl}}=sb.storage.from('videos-ejercicios').getPublicUrl(v.storage_path)
+  document.getElementById('vm-title').textContent=v.titulo
+  document.getElementById('vm-desc').textContent=v.descripcion||''
+  const pl=document.getElementById('vm-player'); pl.src=publicUrl; pl.load()
+  document.getElementById('modal-video').classList.add('open')
+}
+
+// ── CHAT ──
+function rChat(){
+  return `
+  <div class="chat-hdr">
+    <div class="chat-av">VC<div class="chat-online"></div></div>
+    <div>
+      <div style="font-size:15px;font-weight:700;color:var(--text);">Victoria Cartes Campos</div>
+      <div style="font-size:12px;color:#22C55E;margin-top:2px;">En línea · responde en &lt;2 hrs</div>
+    </div>
+    <button class="chat-wa" onclick="toast('Abriendo WhatsApp con Victoria…')"><i class="ti ti-brand-whatsapp"></i> WhatsApp</button>
+  </div>
+  <div class="msgs" id="msgs"><div class="loading-wrap"><div class="spinner"></div></div></div>
+  <div class="qchips">
+    <div class="qchip" onclick="sendQ('Ya hice la sesión de hoy ✅')">Sesión lista ✅</div>
+    <div class="qchip" onclick="sendQ('Tengo una consulta sobre los ejercicios')">Tengo una consulta</div>
+    <div class="qchip" onclick="sendQ('¿Cuándo ajustamos mi plan?')">¿Ajustamos el plan?</div>
+  </div>
+  <div class="chat-inp-row">
+    <input class="chat-inp" id="chat-inp" type="text" placeholder="Escribe a Victoria…" onkeydown="if(event.key==='Enter')sendMsg()">
+    <button class="send-btn" onclick="sendMsg()"><i class="ti ti-send"></i></button>
+  </div>`
+}
+
+let chatSub=null
+async function loadMsgs(){
+  if(!USER)return
+  const msgs=document.getElementById('msgs'); if(!msgs)return
+  const {data:vic}=await sb.from('profiles').select('id').eq('es_victoria',true).single()
+  const vicId=vic?.id
+  const {data,error}=await sb.from('mensajes').select('*')
+    .or(vicId?`and(de_id.eq.${USER.id},para_id.eq.${vicId}),and(de_id.eq.${vicId},para_id.eq.${USER.id})`:`de_id.eq.${USER.id}`)
+    .order('created_at',{ascending:true}).limit(50)
+  if(!data||data.length===0){
+    msgs.innerHTML=`<div class="msg-row vic"><div class="msg-av2 vic">VC</div><div><div class="bub">Hola 👋 Bienvenida a Rekupera. ¡Cualquier duda me escribes!</div><div class="msg-t">Victoria</div></div></div>`
+    return
+  }
+  const initials=(PROFILE?.nombre||'YO').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()
+  msgs.innerHTML=data.map(m=>{
+    const mine=m.de_id===USER.id
+    return `<div class="msg-row ${mine?'me':'vic'}"><div class="msg-av2 ${mine?'me':'vic'}">${mine?initials:'VC'}</div><div><div class="bub">${m.texto}</div><div class="msg-t">${time(m.created_at)}</div></div></div>`
+  }).join('')
+  msgs.scrollTop=msgs.scrollHeight
+  if(chatSub)sb.removeChannel(chatSub)
+  chatSub=sb.channel('chat-'+USER.id).on('postgres_changes',{event:'INSERT',schema:'public',table:'mensajes'},pl=>{
+    const m=pl.new; if(m.de_id!==USER.id&&m.para_id!==USER.id)return
+    const mine=m.de_id===USER.id
+    const d=document.createElement('div'); d.className='msg-row '+(mine?'me':'vic')
+    d.innerHTML=`<div class="msg-av2 ${mine?'me':'vic'}">${mine?initials:'VC'}</div><div><div class="bub">${m.texto}</div><div class="msg-t">${time(m.created_at)}</div></div>`
+    msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight
+  }).subscribe()
+}
+
+async function sendMsg(){
+  const inp=document.getElementById('chat-inp'); const txt=inp?.value?.trim()
+  if(!txt||!USER)return; inp.value=''
+  const {data:vic}=await sb.from('profiles').select('id').eq('es_victoria',true).single()
+  if(!vic)return toast('Victoria no está configurada aún')
+  await sb.from('mensajes').insert({de_id:USER.id,para_id:vic.id,texto:txt})
+}
+
+async function sendQ(txt){
+  if(!USER)return
+  const {data:vic}=await sb.from('profiles').select('id').eq('es_victoria',true).single()
+  if(!vic)return toast('Error al enviar')
+  await sb.from('mensajes').insert({de_id:USER.id,para_id:vic.id,texto:txt})
+}
+
+// ── COACH ──
+function rCoach(){
+  return `
+  <div style="background:#0F0E0D;flex:1;overflow-y:auto;">
+    <div class="coach-hdr"><div><h2>Hola, Victoria 👋</h2><p>Panel de seguimiento de clientas</p></div></div>
+    <div class="coach-stats">
+      <div class="cs-card"><div class="cs-val" id="cs-n">—</div><div class="cs-lbl">Clientas</div></div>
+      <div class="cs-card"><div class="cs-val">—</div><div class="cs-lbl">Activas hoy</div></div>
+      <div class="cs-card"><div class="cs-val" id="cs-m">—</div><div class="cs-lbl">Sin medidas</div></div>
+    </div>
+    <div class="coach-lbl">Clientas activas</div>
+    <div class="clients-list" id="cl-list"><div class="loading-wrap" style="padding:20px;"><div class="spinner" style="border-color:rgba(255,255,255,.1);border-top-color:#C8506A;"></div></div></div>
+    <div class="coach-lbl">Subir video de ejercicio</div>
+    <div class="upload-section">
+      <div><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">TÍTULO</div>
+      <input class="dark-inp" id="v-tit" type="text" placeholder="Ej: Activación suelo pélvico nivel I"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">PROGRAMA</div>
+        <select class="dark-inp" id="v-cat"><option value="">Selecciona…</option>${Object.entries(PC).map(([k,p])=>`<option value="${k}">${p.e} ${p.l}</option>`).join('')}</select></div>
+        <div><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">NIVEL</div>
+        <select class="dark-inp" id="v-niv"><option value="">Nivel…</option><option>Básico</option><option>Intermedio</option><option>Avanzado</option></select></div>
+      </div>
+      <div><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">DURACIÓN</div>
+      <input class="dark-inp" id="v-dur" type="text" placeholder="Ej: 15 min"></div>
+      <div><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">DESCRIPCIÓN</div>
+      <textarea class="dark-inp" id="v-desc" rows="2" placeholder="Describe el ejercicio…" style="resize:none;"></textarea></div>
+      <div class="upload-area" onclick="document.getElementById('v-file').click()">
+        <i class="ti ti-video-plus"></i>
+        <p>Toca para seleccionar el video</p>
+        <p id="v-fname" style="font-size:11px;color:rgba(255,255,255,.3);"></p>
+      </div>
+      <input type="file" id="v-file" accept="video/*" style="display:none" onchange="document.getElementById('v-fname').textContent=this.files[0]?.name||''">
+      <div class="uprog-wrap" id="v-uprog"><div class="uprog-bar" id="v-ubar" style="width:0%"></div></div>
+      <button class="btn-main" onclick="subirVideo()" style="background:#C8506A;"><i class="ti ti-upload"></i> Subir video</button>
+      <button class="btn-main" onclick="cerrarSesion()" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);margin-top:4px;"><i class="ti ti-logout"></i> Cerrar sesión</button>
+    </div>
+  </div>`
+}
+
+async function loadCoach(){
+  const {data:cls}=await sb.from('profiles').select('*').eq('es_victoria',false).not('programa','is',null)
+  const nEl=document.getElementById('cs-n'); if(nEl)nEl.textContent=cls?.length||0
+  const list=document.getElementById('cl-list'); if(!list)return
+  if(!cls||cls.length===0){list.innerHTML='<div style="padding:20px;text-align:center;color:rgba(255,255,255,.3);font-size:13px;">No hay clientas registradas aún.</div>';return}
+  list.innerHTML=cls.map(c=>{
+    const p=PC[c.programa]||PC.peso
+    const ini=(c.nombre||c.email||'??').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()
+    return `<div class="client-card">
+      <div class="cc-top">
+        <div class="cc-av" style="background:${p.a};">${ini}</div>
+        <div><div class="cc-name">${c.nombre||c.email}</div><div class="cc-prog">${p.e} ${p.l}</div></div>
+        <button onclick="toast('Abriendo chat con ${(c.nombre||'').split(' ')[0]}…')" style="margin-left:auto;background:#25D366;border:none;border-radius:8px;padding:6px 10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;"><i class="ti ti-brand-whatsapp"></i></button>
+      </div>
+      <div class="cc-foot">
+        <div><div class="cc-m-val">${p.e} ${p.l}</div><div class="cc-m-lbl">Programa</div></div>
+        <div><div class="cc-m-val">Semana 1</div><div class="cc-m-lbl">Progreso</div></div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+async function subirVideo(){
+  const tit=document.getElementById('v-tit')?.value?.trim()
+  const cat=document.getElementById('v-cat')?.value
+  const niv=document.getElementById('v-niv')?.value
+  const dur=document.getElementById('v-dur')?.value?.trim()
+  const desc=document.getElementById('v-desc')?.value?.trim()
+  const file=document.getElementById('v-file')?.files?.[0]
+  if(!tit||!cat||!file)return toast('Completa título, programa y selecciona un video')
+  const uprog=document.getElementById('v-uprog'), ubar=document.getElementById('v-ubar')
+  if(uprog)uprog.style.display='block'; if(ubar)ubar.style.width='15%'
+  const ext=file.name.split('.').pop(), path=`${cat}/${Date.now()}.${ext}`
+  const {error:ue}=await sb.storage.from('videos-ejercicios').upload(path,file)
+  if(ue){toast('Error al subir video: '+ue.message);return}
+  if(ubar)ubar.style.width='80%'
+  const {error:de}=await sb.from('videos').insert({titulo:tit,categoria:cat,duracion:dur,nivel:niv,descripcion:desc,storage_path:path})
+  if(de){toast('Error al guardar: '+de.message);return}
+  if(ubar)ubar.style.width='100%'
+  setTimeout(()=>{if(uprog)uprog.style.display='none';if(ubar)ubar.style.width='0%'},1500)
+  toast('¡Video subido exitosamente! ✓')
+  document.getElementById('v-tit').value=''; document.getElementById('v-desc').value=''
+  document.getElementById('v-fname').textContent=''
+}
+
+async function cerrarSesion(){
+  await sb.auth.signOut(); USER=null; PROFILE=null
+  document.getElementById('bnav').style.display='none'
+  renderScreen('login')
+}
+</script>
 </body>
 </html>
