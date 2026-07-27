@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Rekupera</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="phone" id="app">
+  <div class="status-bar">
+    <span class="st-time" id="st-time">9:41</span>
+    <div class="st-icons"><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></div>
+  </div>
+  <div class="screens-wrap" id="screens-wrap">
+    <!-- Screens injected by JS -->
+  </div>
+  <div class="bottom-nav" id="bottom-nav" style="display:none;">
+    <button class="nav-t active" onclick="goTab('home',this)" data-tab="home"><i class="ti ti-home"></i><span>Inicio</span></button>
+    <button class="nav-t" onclick="goTab('progreso',this)" data-tab="progreso"><i class="ti ti-chart-line"></i><span>Progreso</span></button>
+    <button class="nav-t" onclick="goTab('videos',this)" data-tab="videos"><i class="ti ti-player-play"></i><span>Ejercicios</span></button>
+    <button class="nav-t" onclick="goTab('chat',this)" data-tab="chat"><i class="ti ti-message-circle"></i><span>Victoria</span></button>
+  </div>
+  <div class="modal-ov" id="modal-medidas" onclick="closeModal('modal-medidas',event)">
+    <div class="modal-sh">
+      <div class="modal-hnd"></div>
+      <div class="modal-tit">Registrar medidas</div>
+      <div class="modal-bd" id="modal-medidas-bd">
+        <div class="inp-grp"><div class="inp-lbl">PESO (kg)</div><input class="m-inp" id="inp-peso" type="number" placeholder="67.5" step="0.1"></div>
+        <div class="inp-grp"><div class="inp-lbl">CINTURA (cm)</div><input class="m-inp" id="inp-cintura" type="number" placeholder="76" step="0.5"></div>
+        <div class="inp-grp"><div class="inp-lbl">CADERA (cm)</div><input class="m-inp" id="inp-cadera" type="number" placeholder="94" step="0.5"></div>
+        <div class="inp-grp"><div class="inp-lbl">MUSLO (cm)</div><input class="m-inp" id="inp-muslo" type="number" placeholder="52" step="0.5"></div>
+        <div class="inp-grp"><div class="inp-lbl">FOTO DE PROGRESO (opcional)</div>
+          <label class="photo-upload-btn" for="inp-foto"><i class="ti ti-camera"></i> Seleccionar foto</label>
+          <input type="file" id="inp-foto" accept="image/*" capture="user" style="display:none" onchange="previewPhoto(this)">
+          <div id="photo-preview" style="display:none;margin-top:8px;border-radius:12px;overflow:hidden;"><img id="preview-img" style="width:100%;border-radius:12px;"></div>
+        </div>
+      </div>
+      <button class="modal-save" id="btn-guardar-medidas" onclick="guardarMedidas()"><i class="ti ti-device-floppy"></i> Guardar medidas</button>
+    </div>
+  </div>
+  <div class="modal-ov" id="modal-video" onclick="closeModal('modal-video',event)">
+    <div class="modal-sh" style="height:85%;">
+      <div class="modal-hnd"></div>
+      <div id="video-player-content" style="padding:0 20px 24px;height:calc(100% - 40px);display:flex;flex-direction:column;gap:14px;">
+        <div id="video-title-modal" style="font-size:18px;font-weight:800;color:var(--text);"></div>
+        <video id="video-player" controls style="width:100%;border-radius:14px;background:#000;flex-shrink:0;max-height:220px;" playsinline></video>
+        <div id="video-desc-modal" style="font-size:14px;color:var(--text2);line-height:1.6;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"><i class="ti ti-sparkles"></i><span id="tmsg"></span></div>
+</div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
