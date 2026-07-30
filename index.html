@@ -1256,241 +1256,690 @@ async function sendMsg(){
 async function sendQ(txt){if(!USER)return;const{data:vic}=await sb.from('profiles').select('id').eq('es_victoria',true).single();if(!vic)return;await sb.from('mensajes').insert({de_id:USER.id,para_id:vic.id,texto:txt})}
 
 // ══════════════════════════════════════════════════
-// COACH PANEL (VICTORIA)
+// COACH PANEL (VICTORIA) — PROFESSIONAL v6
 // ══════════════════════════════════════════════════
+
+let coachMsgSub = null
+let ACTIVE_CHAT = null
+
 async function renderCoach() {
   app().innerHTML = `
-  <div class="app-layout">
-    <aside class="app-sidebar" id="sidebar">
-      <div class="sidebar-logo">
-        <div class="sidebar-logo-icon"><i class="ti ti-activity"></i></div>
-        <span class="sidebar-logo-text">Rekupera</span>
+  <style>
+  .coach-wrap{display:grid;grid-template-columns:260px 1fr;min-height:100vh;}
+  @media(max-width:900px){.coach-wrap{grid-template-columns:1fr;}.csidebar{display:none;}}
+  .csidebar{background:#111210;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;}
+  .csidebar::-webkit-scrollbar{display:none;}
+  .cs-logo{padding:22px 18px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;}
+  .cs-logo-icon{width:34px;height:34px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;}
+  .cs-logo-icon i{font-size:17px;color:#fff;}
+  .cs-logo-name{font-family:'Fraunces',serif;font-size:18px;color:#fff;font-weight:700;}
+  .cs-logo-role{font-size:10px;color:rgba(255,255,255,.3);margin-top:1px;}
+  .cs-nav{flex:1;padding:12px 8px;}
+  .cs-lbl{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.2);padding:12px 10px 5px;}
+  .cs-btn{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r);border:none;background:transparent;cursor:pointer;font-size:13.5px;color:rgba(255,255,255,.5);font-family:inherit;width:100%;text-align:left;transition:all .12s;position:relative;}
+  .cs-btn i{font-size:18px;flex-shrink:0;}
+  .cs-btn:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.85);}
+  .cs-btn.active{background:rgba(255,255,255,.1);color:#fff;font-weight:600;}
+  .cs-btn .cs-bdg{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;min-width:18px;text-align:center;animation:bpulse 2s infinite;}
+  @keyframes bpulse{0%,100%{opacity:1}50%{opacity:.6}}
+  .cs-user{padding:14px 16px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .cs-user-av{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+  .cs-user-name{font-size:13px;font-weight:600;color:#fff;}
+  .cs-user-role{font-size:11px;color:rgba(255,255,255,.3);}
+  .cs-logout{margin-left:auto;background:none;border:none;cursor:pointer;color:rgba(255,255,255,.3);font-size:16px;padding:4px;}
+  .cs-logout:hover{color:rgba(255,255,255,.8);}
+  .cmain{display:flex;flex-direction:column;min-width:0;}
+  .ctopbar{background:var(--white);border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+  .ctopbar h1{font-size:18px;font-weight:700;color:var(--ink);}
+  .ctopbar p{font-size:13px;color:var(--ink3);margin-top:2px;}
+  .ccontent{flex:1;padding:28px;}
+  @media(max-width:600px){.ccontent{padding:16px;}}
+  .notif-btn{position:relative;width:38px;height:38px;border-radius:50%;background:var(--sand);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .notif-btn i{font-size:18px;color:var(--ink2);}
+  .ndot{position:absolute;top:6px;right:6px;width:8px;height:8px;background:#EF4444;border-radius:50%;border:2px solid var(--white);}
+
+  /* Client cards */
+  .cpc{background:var(--white);border-radius:var(--r2);border:1px solid var(--border);overflow:hidden;transition:box-shadow .15s,transform .15s;}
+  .cpc:hover{box-shadow:var(--shadow2);transform:translateY(-2px);}
+  .cpc-hdr{padding:16px 18px;display:flex;align-items:center;gap:13px;border-bottom:1px solid var(--border);}
+  .cpc-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;position:relative;}
+  .cpc-online{width:11px;height:11px;background:#22C55E;border-radius:50%;border:2px solid var(--white);position:absolute;bottom:1px;right:1px;}
+  .cpc-name{font-size:14px;font-weight:700;color:var(--ink);}
+  .cpc-prog{font-size:12px;color:var(--ink3);margin-top:2px;}
+  .cpc-plan{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:5px;display:inline-block;}
+  .cpc-stats{padding:14px 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;border-bottom:1px solid var(--border);}
+  .cpc-stat{text-align:center;}
+  .cpc-stat-v{font-size:18px;font-weight:800;color:var(--ink);font-family:'Fraunces',serif;}
+  .cpc-stat-l{font-size:10px;color:var(--ink3);margin-top:2px;}
+  .cpc-bar{padding:10px 18px;border-bottom:1px solid var(--border);}
+  .cpc-actions{padding:12px 18px;display:flex;gap:8px;}
+
+  /* Client detail side panel */
+  .cdpanel-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:none;align-items:flex-start;justify-content:flex-end;}
+  .cdpanel-ov.open{display:flex;}
+  .cdpanel{background:var(--sand);width:520px;height:100vh;overflow-y:auto;animation:sfr .28s ease;box-shadow:-20px 0 60px rgba(0,0,0,.2);display:flex;flex-direction:column;}
+  .cdpanel::-webkit-scrollbar{display:none;}
+  @keyframes sfr{from{transform:translateX(100%)}to{transform:translateX(0)}}
+  @media(max-width:600px){.cdpanel{width:100%;}}
+  .cdp-hdr{background:var(--white);padding:18px 22px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;flex-shrink:0;}
+  .cdp-close{width:32px;height:32px;border-radius:50%;background:var(--sand);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:auto;flex-shrink:0;}
+  .cdp-sec{padding:18px 22px;border-bottom:1px solid var(--border);}
+  .cdp-sec-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+  .cdp-sec-title i{color:var(--accent);font-size:15px;}
+  .cdp-photos{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .cdp-photo{border-radius:var(--r);aspect-ratio:3/4;background:var(--sand2);overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;}
+  .cdp-photo img{width:100%;height:100%;object-fit:cover;}
+  .cdp-photo-lbl{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.4);padding:5px 9px;font-size:11px;font-weight:700;color:#fff;}
+  .cdp-photo-week{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.4);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;}
+  .pain-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r);font-size:12px;font-weight:700;}
+
+  /* Session calendar */
+  .ses-week{display:flex;flex-direction:column;gap:8px;}
+  .ses-day{background:var(--white);border-radius:var(--r);border:1.5px solid var(--border);overflow:hidden;cursor:pointer;transition:border-color .12s;}
+  .ses-day:hover{border-color:var(--accent);}
+  .ses-day.rest{opacity:.55;cursor:default;}
+  .ses-day.rest:hover{border-color:var(--border);}
+  .ses-day-hdr{padding:10px 14px;display:flex;align-items:center;gap:10px;}
+  .ses-day-exs{padding:4px 14px 12px;display:flex;flex-direction:column;gap:5px;}
+  .ses-day-ex{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--sand);border-radius:8px;}
+
+  /* Coach chat */
+  .cclayout{display:grid;grid-template-columns:280px 1fr;height:calc(100vh - 73px);}
+  @media(max-width:900px){.cclayout{grid-template-columns:1fr;}.cclist-panel{display:none;}}
+  .cclist-panel{background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+  .cclist-hdr{padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .cclist-hdr h3{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:8px;}
+  .ccsearch{width:100%;padding:9px 14px;border:1.5px solid var(--border2);border-radius:20px;font-size:13px;outline:none;font-family:inherit;}
+  .cclist{flex:1;overflow-y:auto;}
+  .cclist::-webkit-scrollbar{display:none;}
+  .cclist-item{padding:13px 16px;display:flex;align-items:center;gap:11px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}
+  .cclist-item:hover{background:var(--sand);}
+  .cclist-item.active{background:var(--accent-l);}
+  .cclist-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;position:relative;}
+  .cclist-online{width:10px;height:10px;background:#22C55E;border-radius:50%;border:2px solid var(--white);position:absolute;bottom:0;right:0;}
+  .cclist-name{font-size:13.5px;font-weight:600;color:var(--ink);}
+  .cclist-last{font-size:12px;color:var(--ink3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;}
+  .cclist-unread{width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:auto;flex-shrink:0;}
+  .ccmain{display:flex;flex-direction:column;background:var(--sand);}
+  .ccmain-hdr{background:var(--white);border-bottom:1px solid var(--border);padding:13px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .ccmain-name{font-size:15px;font-weight:700;color:var(--ink);}
+  .ccmain-sub{font-size:12px;color:var(--ink3);margin-top:2px;}
+  .ccmsgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;}
+  .ccmsgs::-webkit-scrollbar{display:none;}
+  .ccinp-row{background:var(--white);border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:10px;align-items:flex-end;flex-shrink:0;}
+  .ccinp{flex:1;padding:10px 16px;border-radius:22px;border:1.5px solid var(--border2);background:var(--sand);font-size:14px;color:var(--ink);outline:none;font-family:inherit;resize:none;max-height:80px;line-height:1.5;}
+  .ccinp:focus{border-color:var(--accent);}
+  .ccsend{width:42px;height:42px;border-radius:50%;background:var(--accent);border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .ccsend i{font-size:18px;}
+  </style>
+
+  <div class="coach-wrap">
+    <aside class="csidebar" id="csidebar">
+      <div class="cs-logo">
+        <div class="cs-logo-icon"><i class="ti ti-activity"></i></div>
+        <div>
+          <div class="cs-logo-name">Rekupera</div>
+          <div class="cs-logo-role">Panel profesional</div>
+        </div>
       </div>
-      <nav class="sidebar-nav">
-        <button class="nav-item active" onclick="switchCoachTab('dashboard')" id="cnav-dashboard"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
-        <button class="nav-item" onclick="switchCoachTab('clientas')" id="cnav-clientas"><i class="ti ti-users"></i> Clientas</button>
-        <button class="nav-item" onclick="switchCoachTab('mensajes')" id="cnav-mensajes"><i class="ti ti-message-circle"></i> Mensajes <span class="nav-badge" id="msg-badge" style="display:none;">!</span></button>
-        <button class="nav-item" onclick="switchCoachTab('videos')" id="cnav-videos"><i class="ti ti-video-plus"></i> Subir videos</button>
+      <nav class="cs-nav">
+        <div class="cs-lbl">Principal</div>
+        <button class="cs-btn active" onclick="cTab('dashboard')" id="cnav-dashboard"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
+        <button class="cs-btn" onclick="cTab('clientas')" id="cnav-clientas"><i class="ti ti-users"></i> Mis clientas</button>
+        <button class="cs-btn" onclick="cTab('mensajes')" id="cnav-mensajes">
+          <i class="ti ti-message-circle"></i> Mensajes
+          <span class="cs-bdg" id="msg-badge" style="display:none;">0</span>
+        </button>
+        <div class="cs-lbl">Herramientas</div>
+        <button class="cs-btn" onclick="cTab('videos')" id="cnav-videos"><i class="ti ti-video-plus"></i> Biblioteca</button>
+        <button class="cs-btn" onclick="cTab('informes')" id="cnav-informes"><i class="ti ti-file-analytics"></i> Informes</button>
       </nav>
-      <div class="sidebar-user">
-        <div class="user-avatar" style="background:var(--ink);">VC</div>
-        <div><div class="user-name">Victoria</div><div class="user-plan">Coach · Rekupera</div></div>
-        <button class="logout-btn" onclick="doLogout()" title="Cerrar sesión"><i class="ti ti-logout"></i></button>
+      <div class="cs-user">
+        <div class="cs-user-av">VC</div>
+        <div>
+          <div class="cs-user-name">Victoria Cartes</div>
+          <div class="cs-user-role">Preparadora física</div>
+        </div>
+        <button class="cs-logout" onclick="doLogout()" title="Cerrar sesión"><i class="ti ti-logout"></i></button>
       </div>
     </aside>
-    <div class="app-main">
-      <div class="app-topbar">
-        <button class="mobile-menu-btn" onclick="$('sidebar').classList.toggle('open')"><i class="ti ti-menu-2"></i></button>
-        <div><div class="topbar-title" id="coach-topbar-title">Dashboard</div><div class="topbar-sub">Panel de seguimiento de clientas</div></div>
-        <div class="topbar-actions" id="coach-topbar-actions"></div>
+
+    <div class="cmain">
+      <div class="ctopbar">
+        <div>
+          <h1 id="ctitle">Dashboard</h1>
+          <p id="csub">Panel de seguimiento · ${new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})}</p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div id="cactions"></div>
+          <button class="notif-btn" onclick="cTab('mensajes')">
+            <i class="ti ti-bell"></i>
+            <div class="ndot" id="ndot" style="display:none;"></div>
+          </button>
+        </div>
       </div>
-      <div class="page-content" id="coach-content"></div>
+      <div class="ccontent" id="ccontent"></div>
     </div>
+  </div>
+
+  <!-- Client detail panel -->
+  <div class="cdpanel-ov" id="cdpanel-ov" onclick="if(event.target===this)closeCDP()">
+    <div class="cdpanel" id="cdpanel"></div>
   </div>`
+
   await loadClients()
-  switchCoachTab('dashboard')
+  await checkUnread()
+  cTab('dashboard')
+  startCoachRT()
 }
 
 async function loadClients() {
-  const{data}=await sb.from('profiles').select('*').eq('es_victoria',false)
-  ALL_CLIENTS=data||[]
-  // Fill plan modal select
-  const sel=$('plan-clienta');if(sel){sel.innerHTML='<option value="">Selecciona clienta…</option>';ALL_CLIENTS.filter(c=>c.programa).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=(c.nombre||c.email)+' — '+(PC[c.programa]?.l||'');sel.appendChild(o)})}
+  const { data } = await sb.from('profiles').select('*').eq('es_victoria', false).order('created_at', { ascending: false })
+  ALL_CLIENTS = data || []
+  const sel = $('plan-clienta')
+  if (sel) {
+    sel.innerHTML = '<option value="">Selecciona clienta…</option>'
+    ALL_CLIENTS.filter(c => c.programa).forEach(c => {
+      const o = document.createElement('option')
+      o.value = c.id
+      o.textContent = (c.nombre || c.email) + ' — ' + (PC[c.programa]?.l || '')
+      sel.appendChild(o)
+    })
+  }
 }
 
-function switchCoachTab(id) {
-  document.querySelectorAll('[id^="cnav-"]').forEach(n=>n.classList.remove('active'))
+async function checkUnread() {
+  if (!USER) return
+  const { data } = await sb.from('mensajes').select('id').eq('para_id', USER.id).eq('leido', false)
+  const n = data?.length || 0
+  const badge = $('msg-badge'), dot = $('ndot')
+  if (badge) { badge.style.display = n > 0 ? 'inline-flex' : 'none'; badge.textContent = n > 9 ? '9+' : n }
+  if (dot) dot.style.display = n > 0 ? 'block' : 'none'
+}
+
+function startCoachRT() {
+  if (coachMsgSub) { try { sb.removeChannel(coachMsgSub) } catch(e) {} }
+  coachMsgSub = sb.channel('coach-rt-' + USER.id)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, async (pl) => {
+      const m = pl.new
+      if (m.para_id !== USER.id) return
+      await checkUnread()
+      const msgs = $('ccmsgs')
+      if (msgs && ACTIVE_CHAT === m.de_id) {
+        const client = ALL_CLIENTS.find(c => c.id === m.de_id)
+        const p = PC[client?.programa] || PC.peso
+        const d = document.createElement('div'); d.className = 'msg-wrap vic'
+        d.innerHTML = `<div class="msg-av3" style="background:${p.a};color:#fff;">${initials(client?.nombre||client?.email)}</div><div><div class="msg-bub">${m.texto.replace(/\n/g,'<br>')}</div><div class="msg-time">${fmtTime(m.created_at)}</div></div>`
+        msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight
+        await sb.from('mensajes').update({ leido: true }).eq('id', m.id)
+        await checkUnread()
+      } else {
+        const client = ALL_CLIENTS.find(c => c.id === m.de_id)
+        toast(`💬 ${client?.nombre?.split(' ')[0] || 'Clienta'}: ${m.texto.slice(0, 60)}${m.texto.length > 60 ? '…' : ''}`)
+      }
+    }).subscribe()
+}
+
+function cTab(id) {
+  document.querySelectorAll('[id^="cnav-"]').forEach(n => n.classList.remove('active'))
   $(`cnav-${id}`)?.classList.add('active')
-  const titles={dashboard:'Dashboard',clientas:'Clientas',mensajes:'Mensajes',videos:'Subir videos'}
-  $('coach-topbar-title').textContent=titles[id]||id
-  const actions={clientas:[{label:'Enviar plan',icon:'ti-send',fn:'openModal("modal-plan")'}],videos:[{label:'Subir video',icon:'ti-upload',fn:'openModal("modal-video-up")'}]}
-  const el=$('coach-topbar-actions');if(el)el.innerHTML=(actions[id]||[]).map(a=>`<button class="btn-sm btn-accent" onclick="${a.fn}"><i class="ti ${a.icon}"></i> ${a.label}</button>`).join('')
-  const content=$('coach-content');if(!content)return
-  if(id==='dashboard') renderCoachDash(content)
-  if(id==='clientas')  renderCoachClients(content)
-  if(id==='mensajes')  renderCoachChat(content)
-  if(id==='videos')    renderCoachVideos(content)
+  const titles = { dashboard:'Dashboard', clientas:'Mis clientas', mensajes:'Mensajes', videos:'Biblioteca de videos', informes:'Informes semanales' }
+  const subs   = { dashboard:'Resumen y seguimiento de todas las clientas', clientas:'Perfil completo y evolución de cada clienta', mensajes:'Conversaciones en tiempo real', videos:'Ejercicios en video por programa', informes:'Genera y envía informes semanales' }
+  const acts   = { clientas:`<button class="btn-sm btn-accent" onclick="openModal('modal-plan')"><i class="ti ti-send"></i> Enviar plan</button>`, videos:`<button class="btn-sm btn-accent" onclick="openModal('modal-video-up')"><i class="ti ti-upload"></i> Subir video</button>` }
+  if ($('ctitle')) $('ctitle').textContent = titles[id] || id
+  if ($('csub')) $('csub').textContent = subs[id] || ''
+  if ($('cactions')) $('cactions').innerHTML = acts[id] || ''
+  const c = $('ccontent'); if (!c) return
+  c.style.padding  = id === 'mensajes' ? '0' : '28px'
+  c.style.height   = id === 'mensajes' ? 'calc(100vh - 73px)' : ''
+  c.style.overflow = id === 'mensajes' ? 'hidden' : ''
+  if (id === 'dashboard') renderCDash(c)
+  if (id === 'clientas')  renderCClients(c)
+  if (id === 'mensajes')  renderCMsgs(c)
+  if (id === 'videos')    renderCVideos(c)
+  if (id === 'informes')  renderCInformes(c)
 }
 
-// ── COACH DASHBOARD ──
-function renderCoachDash(el) {
-  const activas=ALL_CLIENTS.filter(c=>c.programa).length
+// ── DASHBOARD ──
+async function renderCDash(el) {
+  const activas = ALL_CLIENTS.filter(c => c.programa)
+  const alerts = await loadCoachAlerts()
+  const h = new Date().getHours()
+  const saludo = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches'
+
   el.innerHTML = `
-  <div class="coach-dash">
-    <h2>Hola, Victoria 👋</h2>
-    <p>${new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})}</p>
-    <div class="coach-stat-grid">
-      <div class="coach-stat"><div class="coach-stat-val">${ALL_CLIENTS.length}</div><div class="coach-stat-lbl">Clientas registradas</div></div>
-      <div class="coach-stat"><div class="coach-stat-val">${activas}</div><div class="coach-stat-lbl">Con programa activo</div></div>
-      <div class="coach-stat"><div class="coach-stat-val">—</div><div class="coach-stat-lbl">Sesiones esta semana</div></div>
-    </div>
-  </div>
-  <div class="page-section">
-    <div class="section-hdr"><span class="section-title">Clientas activas</span><button class="btn-sm btn-accent" onclick="openModal('modal-plan')"><i class="ti ti-send"></i> Enviar plan</button></div>
-    <div class="assign-panel">
-      ${ALL_CLIENTS.filter(c=>c.programa).length===0?'<div class="empty-state"><i class="ti ti-users"></i><p>No hay clientas con programa activo aún.</p></div>':
-      ALL_CLIENTS.filter(c=>c.programa).map(c=>coachClientRow(c)).join('')}
-    </div>
-  </div>
-  <div class="page-section">
-    <div class="section-hdr"><span class="section-title">Accesos rápidos</span></div>
-    <div class="grid-3">
-      <div class="card" style="cursor:pointer;" onclick="switchCoachTab('mensajes')"><div style="font-size:28px;margin-bottom:8px;">💬</div><div class="card-title">Ver mensajes</div><div class="card-sub">Responder a clientas</div></div>
-      <div class="card" style="cursor:pointer;" onclick="openModal('modal-plan')"><div style="font-size:28px;margin-bottom:8px;">📋</div><div class="card-title">Enviar plan</div><div class="card-sub">Asignar sesión del día</div></div>
-      <div class="card" style="cursor:pointer;" onclick="openModal('modal-video-up')"><div style="font-size:28px;margin-bottom:8px;">🎥</div><div class="card-title">Subir video</div><div class="card-sub">Nuevo ejercicio en video</div></div>
-    </div>
-  </div>`
-}
-
-function coachClientRow(c) {
-  const p=PC[c.programa]||PC.peso, ini=initials(c.nombre||c.email)
-  return `<div class="client-row">
-    <div class="client-av" style="background:${p.a};width:44px;height:44px;border-radius:50%;font-size:14px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ini}</div>
-    <div class="client-info">
-      <div class="client-name">${c.nombre||c.email}</div>
-      <div class="client-detail">${p.e} ${p.l} · Semana 1</div>
-      <div class="prog-bar-wrap">
-        <div class="prog-bar-row"><span class="prog-bar-label">Avance</span><span class="prog-bar-pct">8%</span></div>
-        <div class="prog-bar"><div class="prog-bar-fill" style="width:8%;background:${p.a};"></div></div>
+  <div style="background:var(--ink);border-radius:var(--r3);padding:28px 32px;margin-bottom:24px;position:relative;overflow:hidden;">
+    <div style="position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.04);top:-80px;right:-60px;pointer-events:none;"></div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:6px;">${saludo}, Victoria 👋</div>
+        <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px;margin-bottom:6px;">Tu panel de seguimiento</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.4);">${activas.length} clientas activas · ${new Date().toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})}</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-sm btn-accent" onclick="openModal('modal-plan')" style="padding:11px 18px;"><i class="ti ti-send"></i> Enviar plan</button>
+        <button class="btn-sm" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:var(--r);padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;" onclick="cTab('mensajes')"><i class="ti ti-message-circle"></i> Mensajes</button>
       </div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;">
-      <button class="btn-sm btn-accent" style="font-size:12px;" onclick="openPlanFor('${c.id}','${(c.nombre||c.email).replace(/'/g,"\\'")}')"><i class="ti ti-send"></i> Enviar plan</button>
-      <button class="btn-sm btn-outline" style="font-size:12px;" onclick="openCoachChat('${c.id}')"><i class="ti ti-message-circle"></i> Escribir</button>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px;">
+      <div style="background:rgba(255,255,255,.07);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-family:'Fraunces',serif;font-size:26px;font-weight:800;color:#fff;">${ALL_CLIENTS.length}</div><div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px;">Clientas totales</div></div>
+      <div style="background:rgba(255,255,255,.07);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-family:'Fraunces',serif;font-size:26px;font-weight:800;color:#fff;">${activas.length}</div><div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px;">Con programa activo</div></div>
+      <div style="background:rgba(255,255,255,.07);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-family:'Fraunces',serif;font-size:26px;font-weight:800;color:${alerts.length>0?'#FCA5A5':'#fff'};">${alerts.length}</div><div style="font-size:11px;color:${alerts.length>0?'#FCA5A5':'rgba(255,255,255,.4)'};margin-top:3px;">Alertas dolor</div></div>
+      <div style="background:rgba(255,255,255,.07);border-radius:var(--r);padding:14px;text-align:center;"><div style="font-family:'Fraunces',serif;font-size:26px;font-weight:800;color:#fff;">—</div><div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:3px;">Sesiones esta semana</div></div>
+    </div>
+  </div>
+
+  ${alerts.length > 0 ? `
+  <div class="page-section">
+    <div class="section-hdr"><span class="section-title" style="color:#DC2626;display:flex;align-items:center;gap:6px;"><i class="ti ti-alert-triangle"></i> Alertas activas</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${alerts.map(a=>`
+      <div style="background:#FFF1F2;border:1.5px solid #FECDD3;border-radius:var(--r2);padding:16px 20px;display:flex;align-items:center;gap:16px;">
+        <div style="width:46px;height:46px;border-radius:50%;background:#FCA5A5;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#DC2626;flex-shrink:0;">${a.nivel}</div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;color:#991B1B;">${a.profiles?.nombre||'Clienta'} — Dolor ${a.nivel}/10</div>
+          <div style="font-size:13px;color:#B91C1C;margin-top:3px;">${a.nota||'Sin nota adicional'} · ${new Date(a.created_at).toLocaleDateString('es-CL')}</div>
+        </div>
+        <button class="btn-sm" style="background:#DC2626;color:#fff;border:none;border-radius:var(--r);padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;" onclick="cTab('mensajes');setTimeout(()=>openCChat('${a.user_id}'),200)"><i class="ti ti-message-circle"></i> Responder</button>
+      </div>`).join('')}
+    </div>
+  </div>` : ''}
+
+  <div class="page-section">
+    <div class="section-hdr">
+      <span class="section-title">Clientas activas</span>
+      <button class="section-link" onclick="cTab('clientas')">Ver todas →</button>
+    </div>
+    ${activas.length === 0
+      ? '<div class="empty-state"><i class="ti ti-users"></i><p>Aún no hay clientas con programa activo.</p></div>'
+      : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">${activas.slice(0,6).map(c=>clientCard(c)).join('')}</div>`}
+  </div>
+
+  <div class="page-section">
+    <div class="section-hdr"><span class="section-title">Acciones rápidas</span></div>
+    <div class="grid-3">
+      <div class="card" style="cursor:pointer;text-align:center;padding:24px;" onclick="cTab('mensajes')"><i class="ti ti-message-circle" style="font-size:30px;color:var(--accent);display:block;margin-bottom:10px;"></i><div style="font-size:15px;font-weight:700;color:var(--ink);">Mensajes</div><div style="font-size:13px;color:var(--ink3);margin-top:4px;">Responder clientas en tiempo real</div></div>
+      <div class="card" style="cursor:pointer;text-align:center;padding:24px;" onclick="openModal('modal-plan')"><i class="ti ti-clipboard-list" style="font-size:30px;color:var(--accent);display:block;margin-bottom:10px;"></i><div style="font-size:15px;font-weight:700;color:var(--ink);">Enviar plan</div><div style="font-size:13px;color:var(--ink3);margin-top:4px;">Constructor de sesiones con ejercicios</div></div>
+      <div class="card" style="cursor:pointer;text-align:center;padding:24px;" onclick="openModal('modal-video-up')"><i class="ti ti-video-plus" style="font-size:30px;color:var(--accent);display:block;margin-bottom:10px;"></i><div style="font-size:15px;font-weight:700;color:var(--ink);">Subir video</div><div style="font-size:13px;color:var(--ink3);margin-top:4px;">Nuevo ejercicio en la biblioteca</div></div>
     </div>
   </div>`
 }
 
-// ── COACH CLIENTS ──
-function renderCoachClients(el) {
+function clientCard(c) {
+  const p = PC[c.programa]||PC.peso, ini = initials(c.nombre||c.email)
+  const planLabel = c.plan==='pro'?'Plan Pro':c.plan==='basico'?'Plan Básico':'Prueba 1 día'
+  const planStyle = c.plan==='pro'?`background:var(--green-l);color:var(--green);`:c.plan==='basico'?`background:var(--blue-l);color:var(--blue);`:`background:var(--amber-l);color:var(--amber);`
+  const sem = c.semana_actual||1
+  return `<div class="cpc">
+    <div class="cpc-hdr">
+      <div class="cpc-av" style="background:${p.a};">${ini}<div class="cpc-online"></div></div>
+      <div style="flex:1;min-width:0;">
+        <div class="cpc-name">${c.nombre||c.email}</div>
+        <div class="cpc-prog">${p.e} ${p.l} · Sem ${sem}</div>
+        <span class="cpc-plan" style="${planStyle}">${planLabel}</span>
+      </div>
+    </div>
+    <div class="cpc-stats">
+      <div class="cpc-stat"><div class="cpc-stat-v">Sem ${sem}</div><div class="cpc-stat-l">Semana actual</div></div>
+      <div class="cpc-stat"><div class="cpc-stat-v">—</div><div class="cpc-stat-l">Dolor prom.</div></div>
+      <div class="cpc-stat"><div class="cpc-stat-v">—</div><div class="cpc-stat-l">Sesiones</div></div>
+    </div>
+    <div class="cpc-bar">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:11px;color:var(--ink3);">Avance programa</span><span style="font-size:11px;font-weight:700;color:var(--ink);">Semana ${sem} de 12</span></div>
+      <div style="height:5px;background:var(--sand2);border-radius:3px;overflow:hidden;"><div style="height:100%;border-radius:3px;background:${p.a};width:${Math.min((sem/12)*100,100).toFixed(0)}%;"></div></div>
+    </div>
+    <div class="cpc-actions">
+      <button class="btn-sm btn-accent" style="flex:1;justify-content:center;font-size:12px;" onclick="openCDP('${c.id}')"><i class="ti ti-user-circle"></i> Ver perfil</button>
+      <button class="btn-sm btn-outline" style="flex:1;justify-content:center;font-size:12px;" onclick="cTab('mensajes');setTimeout(()=>openCChat('${c.id}'),200)"><i class="ti ti-message-circle"></i> Chat</button>
+      <button class="btn-sm btn-outline" style="flex:1;justify-content:center;font-size:12px;" onclick="openPlanFor('${c.id}','${(c.nombre||c.email).replace(/'/g,"\\'")}')"><i class="ti ti-send"></i> Plan</button>
+    </div>
+  </div>`
+}
+
+// ── ALL CLIENTS ──
+function renderCClients(el) {
   el.innerHTML = `
   <div class="page-section">
     <div class="section-hdr"><span class="section-title">Todas las clientas (${ALL_CLIENTS.length})</span><button class="btn-sm btn-accent" onclick="openModal('modal-plan')"><i class="ti ti-send"></i> Enviar plan</button></div>
-    <div class="assign-panel">
-      ${ALL_CLIENTS.length===0?'<div class="empty-state"><i class="ti ti-users"></i><p>Aún no hay clientas registradas.</p></div>':ALL_CLIENTS.map(c=>coachClientRow(c)).join('')}
-    </div>
+    ${ALL_CLIENTS.length === 0
+      ? '<div class="empty-state"><i class="ti ti-users"></i><p>Aún no hay clientas registradas.</p></div>'
+      : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">${ALL_CLIENTS.map(c=>clientCard(c)).join('')}</div>`}
   </div>`
 }
 
-// ── COACH CHAT ──
-function renderCoachChat(el) {
-  el.style.padding='0'; el.style.height='calc(100vh - 73px)'; el.style.overflow='hidden'
-  const clientes=ALL_CLIENTS.filter(c=>c.programa)
-  const firstId=ACTIVE_CHAT||(clientes[0]?.id)
-  el.innerHTML = `
-  <div class="chat-layout">
-    <div class="chat-clients-panel">
-      <div class="chat-panel-header"><h3>Clientas</h3></div>
-      <div class="client-list">
-        ${clientes.length===0?'<div class="empty-state" style="padding:24px;"><p>Sin clientas con programa activo.</p></div>':
-        clientes.map(c=>{const p=PC[c.programa]||PC.peso;return `<div class="client-list-item ${c.id===firstId?'active':''}" id="cli-${c.id}" onclick="openCoachChat('${c.id}')">
-          <div class="client-av" style="background:${p.a};width:40px;height:40px;border-radius:50%;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;">${initials(c.nombre||c.email)}</div>
-          <div><div class="client-av-name">${c.nombre||c.email}</div><div class="client-av-prog">${p.e} ${p.l}</div></div>
-        </div>`}).join('')}
+// ── CLIENT DETAIL PANEL ──
+async function openCDP(clientId) {
+  const client = ALL_CLIENTS.find(c => c.id === clientId); if (!client) return
+  const p = PC[client.programa]||PC.peso
+  $('cdpanel-ov').classList.add('open')
+  $('cdpanel').innerHTML = `<div class="loading-center" style="flex:1;height:100vh;"><div class="spinner"></div></div>`
+
+  const [medR, fotR, dolR, vidR] = await Promise.all([
+    sb.from('medidas').select('*').eq('user_id',clientId).order('created_at',{ascending:false}).limit(10),
+    sb.from('fotos_progreso').select('*').eq('user_id',clientId).order('created_at',{ascending:true}),
+    sb.from('registros_dolor').select('*').eq('user_id',clientId).order('created_at',{ascending:false}).limit(7),
+    sb.from('videos').select('*').eq('categoria',client.programa||'peso').limit(4),
+  ])
+  const meds=medR.data||[], fotos=fotR.data||[], dolores=dolR.data||[], videos=vidR.data||[]
+  const lat=meds[0], first=meds[meds.length-1]
+  const dolorProm = dolores.length>0?(dolores.reduce((a,d)=>a+d.nivel,0)/dolores.length).toFixed(1):'—'
+  const sem = client.semana_actual||1
+  const planLabel = client.plan==='pro'?'Plan Pro — $14.990/mes':client.plan==='basico'?'Plan Básico — $7.990/mes':'Prueba gratuita (1 día)'
+  const planColor = client.plan==='pro'?'var(--green)':client.plan==='basico'?'var(--blue)':'var(--amber)'
+
+  $('cdpanel').innerHTML = `
+  <div class="cdp-hdr">
+    <div style="width:46px;height:46px;border-radius:50%;background:${p.a};color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">${initials(client.nombre||client.email)}</div>
+    <div>
+      <div style="font-size:16px;font-weight:800;color:var(--ink);">${client.nombre||client.email}</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:2px;">${p.e} ${p.l} · <span style="color:${planColor};font-weight:600;">${planLabel}</span></div>
+    </div>
+    <button class="cdp-close" onclick="closeCDP()"><i class="ti ti-x"></i></button>
+  </div>
+
+  <div class="cdp-sec">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+      <div style="background:var(--white);border-radius:var(--r);border:1px solid var(--border);padding:12px;text-align:center;"><div style="font-family:'Fraunces',serif;font-size:22px;font-weight:800;color:var(--ink);">Sem ${sem}</div><div style="font-size:10px;color:var(--ink3);margin-top:3px;">Semana actual</div></div>
+      <div style="background:var(--white);border-radius:var(--r);border:1px solid var(--border);padding:12px;text-align:center;"><div style="font-family:'Fraunces',serif;font-size:22px;font-weight:800;color:${parseFloat(dolorProm)>=7?'#DC2626':parseFloat(dolorProm)>=4?'var(--amber)':'var(--green)'};">${dolorProm}</div><div style="font-size:10px;color:var(--ink3);margin-top:3px;">Dolor promedio</div></div>
+      <div style="background:var(--white);border-radius:var(--r);border:1px solid var(--border);padding:12px;text-align:center;"><div style="font-family:'Fraunces',serif;font-size:22px;font-weight:800;color:var(--ink);">${meds.length}</div><div style="font-size:10px;color:var(--ink3);margin-top:3px;">Registros</div></div>
+    </div>
+  </div>
+
+  <div class="cdp-sec">
+    <div class="cdp-sec-title"><i class="ti ti-camera"></i> Fotos de progreso</div>
+    ${fotos.length>=2
+      ? `<div class="cdp-photos">
+          <div class="cdp-photo"><img src="${sb.storage.from('fotos-progreso').getPublicUrl(fotos[0].path).data.publicUrl}" alt="inicio"><div class="cdp-photo-lbl">Antes</div><div class="cdp-photo-week">Inicio</div></div>
+          <div class="cdp-photo"><img src="${sb.storage.from('fotos-progreso').getPublicUrl(fotos[fotos.length-1].path).data.publicUrl}" alt="ahora"><div class="cdp-photo-lbl">Ahora</div><div class="cdp-photo-week">Hoy</div></div>
+        </div>`
+      : '<div class="empty-state" style="padding:16px;"><i class="ti ti-camera-off"></i><p>Sin fotos de progreso aún.</p></div>'}
+  </div>
+
+  <div class="cdp-sec">
+    <div class="cdp-sec-title"><i class="ti ti-ruler"></i> Medidas corporales</div>
+    ${lat ? `<div style="background:var(--white);border-radius:var(--r2);border:1px solid var(--border);overflow:hidden;">
+      ${[['ti-weight','Peso',lat.peso,first?.peso,'kg'],['ti-circle','Cintura',lat.cintura,first?.cintura,'cm'],['ti-circle-dotted','Cadera',lat.cadera,first?.cadera,'cm'],['ti-minus','Muslo',lat.muslo,first?.muslo,'cm']].filter(r=>r[2]).map(([ico,nam,val,ini2,u])=>{
+        const diff=val&&ini2?(val-ini2).toFixed(1):null
+        const isGood=diff&&parseFloat(diff)<0
+        return `<div class="measure-item"><div class="measure-ico" style="background:${p.al};color:${p.a};"><i class="ti ${ico}"></i></div><span class="measure-name">${nam}</span><div style="text-align:right;"><div class="measure-val">${val} ${u}</div>${diff?`<div class="measure-delta ${isGood?'delta-up':'delta-accent'}">${isGood?'↓':'↑'} ${Math.abs(diff)} ${u} desde el inicio</div>`:''}</div></div>`
+      }).join('')}
+    </div>` : '<div class="empty-state" style="padding:14px;"><i class="ti ti-ruler"></i><p>Sin medidas aún.</p></div>'}
+  </div>
+
+  <div class="cdp-sec">
+    <div class="cdp-sec-title"><i class="ti ti-heart-rate-monitor"></i> Registro de dolor (últimos días)</div>
+    ${dolores.length>0
+      ? `<div style="display:flex;flex-direction:column;gap:7px;">${dolores.map(d=>{
+          const col=d.nivel<=3?'#3A8A5A':d.nivel<=6?'#D4783A':'#DC2626'
+          const bg=d.nivel<=3?'#E2F4EA':d.nivel<=6?'#FAEEE4':'#FFF1F2'
+          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--white);border-radius:var(--r);border:1px solid var(--border);">
+            <div style="width:36px;height:36px;border-radius:50%;background:${bg};color:${col};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;">${d.nivel}</div>
+            <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--ink);">Nivel ${d.nivel}/10</div><div style="font-size:11px;color:var(--ink3);">${new Date(d.created_at).toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short'})}</div>${d.nota?`<div style="font-size:12px;color:var(--ink2);font-style:italic;">"${d.nota}"</div>`:''}</div>
+            ${d.nivel>=7?'<span class="tag" style="background:#FFF1F2;color:#DC2626;flex-shrink:0;font-size:10px;"><i class="ti ti-alert-triangle"></i> Alta</span>':''}
+          </div>`}).join('')}</div>`
+      : '<div class="empty-state" style="padding:14px;"><i class="ti ti-heart-rate-monitor"></i><p>Sin registros de dolor.</p></div>'}
+  </div>
+
+  <div class="cdp-sec">
+    <div class="cdp-sec-title"><i class="ti ti-calendar-week"></i> Sesiones de esta semana</div>
+    <div class="ses-week">${buildWeekSessions(client)}</div>
+  </div>
+
+  ${videos.length>0?`
+  <div class="cdp-sec">
+    <div class="cdp-sec-title"><i class="ti ti-player-play"></i> Videos de su programa</div>
+    <div style="display:flex;flex-direction:column;gap:7px;">${videos.map(v=>`
+      <div style="background:var(--white);border-radius:var(--r);border:1px solid var(--border);padding:11px 14px;display:flex;align-items:center;gap:11px;">
+        <div style="width:38px;height:38px;border-radius:var(--r);background:${p.al};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${p.e}</div>
+        <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--ink);">${v.titulo}</div><div style="font-size:11px;color:var(--ink3);">${v.duracion||'—'} · ${v.nivel||'—'}</div></div>
+      </div>`).join('')}
+    </div>
+  </div>`:'' }
+
+  <div style="padding:18px 22px;display:flex;gap:10px;">
+    <button class="btn-sm btn-accent" style="flex:1;justify-content:center;padding:12px;" onclick="openPlanFor('${client.id}','${(client.nombre||'').replace(/'/g,"\\'")}');closeCDP()"><i class="ti ti-send"></i> Enviar plan</button>
+    <button class="btn-sm btn-outline" style="flex:1;justify-content:center;padding:12px;" onclick="closeCDP();cTab('mensajes');setTimeout(()=>openCChat('${client.id}'),200)"><i class="ti ti-message-circle"></i> Escribir</button>
+  </div>`
+}
+
+function buildWeekSessions(client) {
+  const p = PC[client.programa]||PC.peso
+  const s = SESSIONS[client.programa]||SESSIONS.peso
+  const today = new Date()
+  const days = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
+  const sesIdx = [0,2,4] // Mon, Wed, Fri
+  return Array.from({length:7},(_,i)=>{
+    const d = new Date(today); d.setDate(today.getDate()-today.getDay()+(i===6?0:i+1))
+    const isToday = d.toDateString()===today.toDateString()
+    const hasSes  = sesIdx.includes(i)
+    const label   = `${days[i]} ${d.getDate()}${isToday?' · Hoy':''}`
+    if (!hasSes) return `<div class="ses-day rest"><div class="ses-day-hdr" style="padding:10px 14px;"><span style="font-size:12px;color:var(--ink3);font-weight:600;">${label}</span><span style="margin-left:auto;font-size:11px;color:var(--ink3);">Descanso activo</span></div></div>`
+    return `<div class="ses-day">
+      <div class="ses-day-hdr">
+        <span style="background:${isToday?p.a:p.al};color:${isToday?'#fff':p.a};padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;">${label}</span>
+        <span class="tag" style="background:${p.al};color:${p.a};margin-left:auto;font-size:10px;">${s.meta}</span>
       </div>
-    </div>
-    <div class="chat-main" id="coach-chat-main">
-      ${firstId?'<div class="loading-center"><div class="spinner"></div></div>':'<div class="empty-state" style="flex:1;justify-content:center;"><i class="ti ti-message-circle"></i><p>Selecciona una clienta para ver su chat.</p></div>'}
-    </div>
-  </div>`
-  if(firstId) openCoachChat(firstId)
-}
-
-async function openCoachChat(clientId) {
-  ACTIVE_CHAT=clientId
-  document.querySelectorAll('.client-list-item').forEach(el=>el.classList.remove('active'))
-  $(`cli-${clientId}`)?.classList.add('active')
-  const client=ALL_CLIENTS.find(c=>c.id===clientId)
-  const p=PC[client?.programa]||PC.peso
-  const mainEl=$('coach-chat-main'); if(!mainEl)return
-  mainEl.innerHTML=`
-    <div class="chat-header">
-      <div class="chat-av-lg" style="background:${p.a};">${initials(client?.nombre||client?.email)}</div>
-      <div><div class="chat-header-name">${client?.nombre||client?.email}</div><div class="chat-header-status">${p.e} ${p.l}</div></div>
-      <button class="btn-sm btn-accent" style="margin-left:auto;" onclick="openPlanFor('${clientId}','${(client?.nombre||'').replace(/'/g,"\\'")}')"><i class="ti ti-send"></i> Enviar plan</button>
-      <button class="wa-btn" onclick="toast('Abriendo WhatsApp…')"><i class="ti ti-brand-whatsapp"></i></button>
-    </div>
-    <div class="messages-area" id="coach-msgs"><div class="loading-center"><div class="spinner"></div></div></div>
-    <div class="chat-input-area">
-      <input class="chat-input" id="coach-chat-inp" type="text" placeholder="Escribe a ${client?.nombre?.split(' ')[0]||'la clienta'}…" onkeydown="if(event.key==='Enter')sendCoachMsg('${clientId}')">
-      <button class="chat-send" onclick="sendCoachMsg('${clientId}')"><i class="ti ti-send"></i></button>
-    </div>`
-  // Load messages
-  const{data}=await sb.from('mensajes').select('*')
-    .or(`and(de_id.eq.${USER.id},para_id.eq.${clientId}),and(de_id.eq.${clientId},para_id.eq.${USER.id})`)
-    .order('created_at',{ascending:true}).limit(60)
-  const msgs=$('coach-msgs'); if(!msgs)return
-  if(!data||data.length===0){msgs.innerHTML=`<div class="empty-state"><i class="ti ti-message-circle"></i><p>Sin mensajes aún con ${client?.nombre?.split(' ')[0]||'esta clienta'}.</p></div>`;return}
-  const cIni=initials(client?.nombre||client?.email)
-  msgs.innerHTML=data.map(m=>{
-    const mine=m.de_id===USER.id
-    return `<div class="msg-wrap ${mine?'mine':'vic'}">
-      <div class="msg-av3" style="background:${mine?'var(--ink)':''+p.a};color:#fff;">${mine?'VC':cIni}</div>
-      <div><div class="msg-bub">${m.texto}</div><div class="msg-time">${fmtTime(m.created_at)}</div></div>
+      <div class="ses-day-exs">
+        <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:5px;">${s.title}</div>
+        ${s.exs.slice(0,4).map((e,idx)=>`<div class="ses-day-ex"><div style="width:20px;height:20px;border-radius:50%;background:${p.al};color:${p.a};font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${idx+1}</div><span style="font-size:12px;color:var(--ink2);flex:1;">${e[0]}</span><span style="font-size:11px;color:var(--ink3);">${e[1]}</span></div>`).join('')}
+        ${s.exs.length>4?`<div style="font-size:11px;color:var(--ink3);text-align:center;padding:3px;">+${s.exs.length-4} ejercicios más</div>`:''}
+      </div>
     </div>`
   }).join('')
-  msgs.scrollTop=msgs.scrollHeight
-  // Realtime
-  if(chatSub){try{await sb.removeChannel(chatSub)}catch(e){}}
-  chatSub=sb.channel('coach-chat-'+clientId).on('postgres_changes',{event:'INSERT',schema:'public',table:'mensajes'},pl=>{
-    const m=pl.new; if(m.de_id!==clientId&&m.para_id!==clientId) return
-    const mine=m.de_id===USER.id
-    const d=document.createElement('div');d.className='msg-wrap '+(mine?'mine':'vic')
-    d.innerHTML=`<div class="msg-av3" style="background:${mine?'var(--ink)':''+p.a};color:#fff;">${mine?'VC':cIni}</div><div><div class="msg-bub">${m.texto}</div><div class="msg-time">${fmtTime(m.created_at)}</div></div>`
-    msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight
-  }).subscribe()
 }
 
-async function sendCoachMsg(clientId) {
-  const inp=$('coach-chat-inp'); const txt=inp?.value?.trim(); if(!txt) return; inp.value=''
-  await sb.from('mensajes').insert({de_id:USER.id,para_id:clientId,texto:txt})
+function closeCDP() { $('cdpanel-ov')?.classList.remove('open') }
+
+// ── MESSAGES ──
+function renderCMsgs(el) {
+  const clientes = ALL_CLIENTS.filter(c => c.programa)
+  const firstId = ACTIVE_CHAT || clientes[0]?.id
+  el.innerHTML = `
+  <div class="cclayout">
+    <div class="cclist-panel">
+      <div class="cclist-hdr">
+        <h3>Conversaciones</h3>
+        <input class="ccsearch" type="text" placeholder="Buscar clienta…" oninput="filterCC(this.value)">
+      </div>
+      <div class="cclist" id="cclist">
+        ${clientes.length===0
+          ? '<div class="empty-state" style="padding:24px;font-size:13px;"><p>Sin clientas con programa activo.</p></div>'
+          : clientes.map(c=>ccItem(c,c.id===firstId)).join('')}
+      </div>
+    </div>
+    <div class="ccmain" id="ccmain">
+      ${firstId
+        ? '<div class="loading-center" style="flex:1;"><div class="spinner"></div></div>'
+        : '<div class="empty-state" style="flex:1;justify-content:center;"><i class="ti ti-message-circle"></i><p>Selecciona una clienta para ver su chat.</p></div>'}
+    </div>
+  </div>`
+  if (firstId) openCChat(firstId)
 }
 
-function openPlanFor(clientId, clientName) {
-  const sel=$('plan-clienta'); if(sel) sel.value=clientId
-  openModal('modal-plan')
+function ccItem(c, isActive) {
+  const p = PC[c.programa]||PC.peso
+  return `<div class="cclist-item ${isActive?'active':''}" id="cci-${c.id}" onclick="openCChat('${c.id}')">
+    <div class="cclist-av" style="background:${p.a};">${initials(c.nombre||c.email)}<div class="cclist-online"></div></div>
+    <div style="flex:1;min-width:0;">
+      <div class="cclist-name">${c.nombre||c.email}</div>
+      <div class="cclist-last">${p.e} ${p.l}</div>
+    </div>
+  </div>`
 }
 
-async function enviarPlan() {
-  const clientId=tval('plan-clienta')||$('plan-clienta')?.value
-  const titulo=tval('plan-titulo'), semana=tval('plan-semana'), dur=tval('plan-duracion'), notas=tval('plan-notas')
-  if(!clientId||!titulo) return toast('Selecciona clienta y escribe el título de la sesión')
-  const rows=[...$('exercise-builder').querySelectorAll('.ex-builder-row')]
-  const ejercicios=rows.map(row=>{const inps=row.querySelectorAll('input');return{nombre:inps[0]?.value?.trim(),series:inps[1]?.value?.trim(),reps:inps[2]?.value?.trim()}}).filter(e=>e.nombre)
-  const texto=`📋 *Plan de sesión — Semana ${semana||'?'}*\n\n*${titulo}*\n${dur?'⏱ '+dur+'\n':''}\n${ejercicios.map((e,i)=>`${i+1}. ${e.nombre}${e.series?' — '+e.series:''}${e.reps?' × '+e.reps:''}`).join('\n')}${notas?'\n\n💬 '+notas:''}`
-  const{error}=await sb.from('mensajes').insert({de_id:USER.id,para_id:clientId,texto})
-  if(error) return toast('Error al enviar: '+error.message)
-  closeModal('modal-plan')
-  toast('Plan enviado a la clienta ✓')
-  if(ACTIVE_CHAT===clientId) setTimeout(()=>openCoachChat(clientId),300)
+function filterCC(q) {
+  document.querySelectorAll('.cclist-item').forEach(el => {
+    el.style.display = el.querySelector('.cclist-name')?.textContent?.toLowerCase().includes(q.toLowerCase()) ? 'flex' : 'none'
+  })
 }
 
-// ── COACH VIDEOS ──
-function renderCoachVideos(el) {
+async function openCChat(clientId) {
+  ACTIVE_CHAT = clientId
+  document.querySelectorAll('.cclist-item').forEach(el => el.classList.remove('active'))
+  $(`cci-${clientId}`)?.classList.add('active')
+  const client = ALL_CLIENTS.find(c => c.id === clientId); if (!client) return
+  const p = PC[client.programa]||PC.peso
+  const main = $('ccmain'); if (!main) return
+  main.innerHTML = `
+  <div class="ccmain-hdr">
+    <div style="width:42px;height:42px;border-radius:50%;background:${p.a};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;position:relative;">
+      ${initials(client.nombre||client.email)}<div class="online-dot"></div>
+    </div>
+    <div style="flex:1;">
+      <div class="ccmain-name">${client.nombre||client.email}</div>
+      <div class="ccmain-sub">${p.e} ${p.l} · ${client.plan==='pro'?'Plan Pro':client.plan==='basico'?'Plan Básico':'Prueba'} · Sem ${client.semana_actual||1}</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-sm btn-accent" style="font-size:12px;" onclick="openCDP('${clientId}')"><i class="ti ti-user-circle"></i> Perfil</button>
+      <button class="btn-sm btn-outline" style="font-size:12px;" onclick="openPlanFor('${clientId}','${(client.nombre||'').replace(/'/g,"\\'")}')"><i class="ti ti-send"></i> Plan</button>
+      <button class="wa-btn" style="font-size:12px;" onclick="toast('Abriendo WhatsApp…')"><i class="ti ti-brand-whatsapp"></i></button>
+    </div>
+  </div>
+  <div class="ccmsgs" id="ccmsgs"><div class="loading-center"><div class="spinner"></div></div></div>
+  <div class="ccinp-row">
+    <textarea class="ccinp" id="ccinp" placeholder="Escribe a ${client.nombre?.split(' ')[0]||'la clienta'}…" rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCMsg('${clientId}')}"></textarea>
+    <button class="ccsend" onclick="sendCMsg('${clientId}')"><i class="ti ti-send"></i></button>
+  </div>`
+
+  const { data } = await sb.from('mensajes').select('*')
+    .or(`and(de_id.eq.${USER.id},para_id.eq.${clientId}),and(de_id.eq.${clientId},para_id.eq.${USER.id})`)
+    .order('created_at',{ascending:true}).limit(80)
+
+  if (data?.length) {
+    await sb.from('mensajes').update({leido:true}).eq('para_id',USER.id).eq('de_id',clientId)
+    await checkUnread()
+  }
+
+  const msgs = $('ccmsgs'); if (!msgs) return
+  const cIni = initials(client.nombre||client.email)
+
+  if (!data||data.length===0) {
+    msgs.innerHTML = `<div class="empty-state"><i class="ti ti-message-circle"></i><p>Sin mensajes aún con ${client.nombre?.split(' ')[0]||'esta clienta'}.<br>Escríbele tú primero.</p></div>`
+  } else {
+    let lastDate = ''
+    msgs.innerHTML = data.map(m => {
+      const mine = m.de_id === USER.id
+      const msgDate = new Date(m.created_at).toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})
+      const sep = msgDate !== lastDate ? `<div class="date-sep">${msgDate}</div>` : ''
+      lastDate = msgDate
+      return sep + `<div class="msg-wrap ${mine?'mine':'vic'}">
+        <div class="msg-av3" style="background:${mine?'var(--ink)':p.a};color:#fff;">${mine?'VC':cIni}</div>
+        <div><div class="msg-bub">${m.texto.replace(/\n/g,'<br>').replace(/\*(.*?)\*/g,'<strong>$1</strong>')}</div><div class="msg-time">${fmtTime(m.created_at)}</div></div>
+      </div>`
+    }).join('')
+    msgs.scrollTop = msgs.scrollHeight
+  }
+}
+
+async function sendCMsg(clientId) {
+  const inp = $('ccinp'); const txt = inp?.value?.trim(); if (!txt) return
+  inp.value = ''; inp.style.height = 'auto'
+  await sb.from('mensajes').insert({de_id:USER.id, para_id:clientId, texto:txt})
+  const msgs = $('ccmsgs'); if (!msgs) return
+  const d = document.createElement('div'); d.className = 'msg-wrap mine'
+  d.innerHTML = `<div class="msg-av3" style="background:var(--ink);color:#fff;">VC</div><div><div class="msg-bub">${txt.replace(/\n/g,'<br>')}</div><div class="msg-time">${fmtTime(new Date().toISOString())}</div></div>`
+  if (msgs.querySelector('.empty-state')) msgs.innerHTML = ''
+  msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight
+}
+
+// ── VIDEOS ──
+function renderCVideos(el) {
   el.innerHTML = `
   <div class="grid-2">
     <div class="page-section" style="margin-bottom:0;">
       <div class="section-hdr"><span class="section-title">Subir nuevo video</span></div>
-      <div class="card">
-        <p style="font-size:14px;color:var(--ink2);margin-bottom:20px;line-height:1.6;">Sube los videos de ejercicios que tus clientas verán en su sección de ejercicios. Organízalos por programa para que cada clienta encuentre los suyos.</p>
-        <button class="btn-sm btn-accent" style="width:100%;padding:13px;font-size:15px;" onclick="openModal('modal-video-up')"><i class="ti ti-video-plus"></i> Subir video de ejercicio</button>
+      <div class="card" style="padding:24px;">
+        <p style="font-size:14px;color:var(--ink2);margin-bottom:20px;line-height:1.7;">Sube videos de ejercicios para cada programa. Tus clientas los verán en su sección de Ejercicios, filtrados por su programa activo.</p>
+        <button class="btn-sm btn-accent" style="width:100%;padding:14px;font-size:15px;" onclick="openModal('modal-video-up')"><i class="ti ti-video-plus"></i> Subir video</button>
       </div>
     </div>
     <div class="page-section" style="margin-bottom:0;">
-      <div class="section-hdr"><span class="section-title">Videos subidos</span></div>
-      <div id="coach-video-list"><div class="loading-center"><div class="spinner"></div></div></div>
+      <div class="section-hdr"><span class="section-title">Biblioteca</span><span id="vcnt" style="font-size:12px;color:var(--ink3);"></span></div>
+      <div id="cvlist"><div class="loading-center"><div class="spinner"></div></div></div>
     </div>
   </div>`
-  loadCoachVideos()
+  loadCVideos()
 }
 
-async function loadCoachVideos() {
-  const{data}=await sb.from('videos').select('*').order('created_at',{ascending:false})
-  const list=$('coach-video-list'); if(!list) return
+async function loadCVideos() {
+  const {data} = await sb.from('videos').select('*').order('created_at',{ascending:false})
+  const list=$('cvlist'), cnt=$('vcnt'); if(!list)return
+  if(cnt) cnt.textContent=`${data?.length||0} videos`
   if(!data||data.length===0){list.innerHTML='<div class="empty-state"><i class="ti ti-video-off"></i><p>Aún no has subido videos.</p></div>';return}
-  list.innerHTML=data.map(v=>{const p=PC[v.categoria]||PC.peso;return `<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px;padding:14px;"><div style="width:42px;height:42px;border-radius:var(--r);background:${p.al};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${p.e}</div><div style="flex:1;"><div style="font-size:14px;font-weight:600;color:var(--ink);">${v.titulo}</div><div style="font-size:12px;color:var(--ink3);margin-top:2px;">${p.l} · ${v.duracion||'—'} · ${v.nivel||'—'}</div></div></div>`}).join('')
+  ALL_VIDEOS=data
+  list.innerHTML=data.map(v=>{const p=PC[v.categoria]||PC.peso;return `
+    <div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer;" onclick="playVideo('${v.id}')">
+      <div style="width:50px;height:50px;border-radius:var(--r);background:${p.al};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;position:relative;">
+        ${p.e}
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,.2);border-radius:var(--r);display:flex;align-items:center;justify-content:center;opacity:0;transition:.15s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0"><i class="ti ti-player-play" style="font-size:16px;color:#fff;"></i></div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:700;color:var(--ink);">${v.titulo}</div>
+        <div style="font-size:12px;color:var(--ink3);margin-top:3px;">${p.l} · ${v.duracion||'—'} · ${v.nivel||'—'}</div>
+        ${v.descripcion?`<div style="font-size:12px;color:var(--ink2);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${v.descripcion}</div>`:''}
+      </div>
+      <span class="tag" style="background:${p.al};color:${p.a};flex-shrink:0;">${p.e}</span>
+    </div>`}).join('')
 }
 
+// ── INFORMES ──
+function renderCInformes(el) {
+  const clientes = ALL_CLIENTS.filter(c=>c.programa)
+  el.innerHTML=`
+  <div class="page-section">
+    <div class="card" style="padding:28px;background:linear-gradient(135deg,var(--ink),#2D2A26);margin-bottom:20px;">
+      <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:800;color:#fff;margin-bottom:8px;">Informes semanales</div>
+      <div style="font-size:14px;color:rgba(255,255,255,.6);margin-bottom:20px;line-height:1.6;">Envía un resumen personalizado a cada clienta al finalizar la semana. Llega como mensaje en su chat con métricas y tu nota personal.</div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-sm btn-accent" style="padding:11px 18px;"><i class="ti ti-send-2"></i> Enviar a todas</button>
+      </div>
+    </div>
+    ${clientes.length===0
+      ? '<div class="empty-state"><i class="ti ti-file-analytics"></i><p>Sin clientas activas aún.</p></div>'
+      : `<div style="display:flex;flex-direction:column;gap:10px;">${clientes.map(c=>{
+          const p=PC[c.programa]||PC.peso
+          return `<div class="card" style="display:flex;align-items:center;gap:14px;padding:16px 20px;">
+            <div style="width:42px;height:42px;border-radius:50%;background:${p.a};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${initials(c.nombre||c.email)}</div>
+            <div style="flex:1;"><div style="font-size:14px;font-weight:700;color:var(--ink);">${c.nombre||c.email}</div><div style="font-size:12px;color:var(--ink3);margin-top:2px;">${p.e} ${p.l} · Semana ${c.semana_actual||1}</div></div>
+            <button class="btn-sm btn-accent" style="font-size:12px;" onclick="sendWeeklyReport('${c.id}')"><i class="ti ti-send"></i> Enviar informe</button>
+          </div>`
+        }).join('')}</div>`}
+  </div>`
+}
+
+async function sendWeeklyReport(clientId) {
+  const client=ALL_CLIENTS.find(c=>c.id===clientId);if(!client)return
+  const p=PC[client.programa]||PC.peso
+  const texto=`📊 *Informe semanal — Semana ${client.semana_actual||1}*\n\n${p.e} *${p.l}*\n\nHola ${client.nombre?.split(' ')[0]||''}! Aquí está tu resumen de la semana:\n\n✅ Sesiones: en progreso\n📏 Medidas: registradas\n💪 Adherencia: excelente\n\n*Nota de Victoria:* Estás haciendo un trabajo increíble. Semana a semana el cambio se hace visible. ¡Mucho ánimo para la próxima semana!\n\n— Victoria Cartes Campos 💙`
+  const {error}=await sb.from('mensajes').insert({de_id:USER.id,para_id:clientId,texto})
+  if(error)return toast('Error: '+error.message)
+  toast(`Informe enviado a ${client.nombre?.split(' ')[0]||'la clienta'} ✓`)
+}
+
+// ── PLAN MODAL ──
+function openPlanFor(clientId, clientName) {
+  const sel=$('plan-clienta');if(sel)sel.value=clientId
+  openModal('modal-plan')
+}
+
+async function enviarPlan() {
+  const clientId=$('plan-clienta')?.value
+  const titulo=tval('plan-titulo'),semana=tval('plan-semana'),dur=tval('plan-duracion'),notas=tval('plan-notas')
+  if(!clientId||!titulo)return toast('Selecciona clienta y escribe el título')
+  const rows=[...$('exercise-builder').querySelectorAll('.ex-builder-row')]
+  const ejercicios=rows.map(row=>{const inps=row.querySelectorAll('input');return{nombre:inps[0]?.value?.trim(),series:inps[1]?.value?.trim(),reps:inps[2]?.value?.trim()}}).filter(e=>e.nombre)
+  const client=ALL_CLIENTS.find(c=>c.id===clientId)
+  const p=PC[client?.programa]||PC.peso
+  const texto=`📋 *Sesión del día — Semana ${semana||'?'}*\n\n${p.e} *${titulo}*\n${dur?'⏱ Duración: '+dur:''}\n\n${ejercicios.length>0?ejercicios.map((e,i)=>`${i+1}. *${e.nombre}*${e.series?' — '+e.series:''}${e.reps?' × '+e.reps:''}`).join('\n'):'Sin ejercicios añadidos.'}${notas?'\n\n💬 *Nota de Victoria:* '+notas:''}\n\n¡Mucho ánimo! Cualquier duda me escribes 💪\n— Victoria`
+  const {error}=await sb.from('mensajes').insert({de_id:USER.id,para_id:clientId,texto})
+  if(error)return toast('Error: '+error.message)
+  closeModal('modal-plan')
+  toast(`Plan enviado a ${client?.nombre?.split(' ')[0]||'la clienta'} ✓`)
+  if(ACTIVE_CHAT===clientId)setTimeout(()=>openCChat(clientId),300)
+}
+
+// ── VIDEO UPLOAD ──
 async function subirVideo() {
   const tit=tval('vup-titulo'),cat=$('vup-cat')?.value,niv=$('vup-nivel')?.value,dur=tval('vup-dur'),desc=tval('vup-desc'),file=$('vup-file')?.files?.[0]
   if(!tit||!cat||!file)return toast('Completa título, programa y selecciona un video')
@@ -1505,26 +1954,1236 @@ async function subirVideo() {
   if(ubar)ubar.style.width='100%';setTimeout(()=>{if(uprog)uprog.style.display='none';if(ubar)ubar.style.width='0%'},1500)
   toast('¡Video subido exitosamente! ✓')
   closeModal('modal-video-up')
-  loadCoachVideos()
-}
-
-// ── COACH ── load
-async function loadCoach() {
-  const{data}=await sb.from('profiles').select('*').eq('es_victoria',false)
-  ALL_CLIENTS=data||[]
+  loadCVideos()
 }
 
 // ── EXERCISE BUILDER ──
-function addExRow() {
-  const builder=$('exercise-builder'); if(!builder) return
-  const row=document.createElement('div'); row.className='ex-builder-row'
-  row.innerHTML=`<input class="inp-field" type="text" placeholder="Nombre del ejercicio"><input class="inp-field" type="text" placeholder="Series"><input class="inp-field" type="text" placeholder="Reps/Tiempo"><button class="ex-remove" onclick="removeEx(this)"><i class="ti ti-trash"></i></button>`
-  builder.appendChild(row)
+function addExRow(){
+  const b=$('exercise-builder');if(!b)return
+  const r=document.createElement('div');r.className='ex-builder-row'
+  r.innerHTML=`<input class="inp-field" type="text" placeholder="Nombre del ejercicio"><input class="inp-field" type="text" placeholder="Series"><input class="inp-field" type="text" placeholder="Reps/Tiempo"><button class="ex-remove" onclick="removeEx(this)"><i class="ti ti-trash"></i></button>`
+  b.appendChild(r)
 }
-function removeEx(btn) { btn.closest('.ex-builder-row')?.remove() }
+function removeEx(btn){btn.closest('.ex-builder-row')?.remove()}
 
 // ── MODAL ──
-function openModal(id) { $(id)?.classList.add('open') }
+function openModal(id){$(id)?.classList.add('open')}
 </script>
 </body>
 </html>
+<!-- V5 INNOVATIONS APPENDED -->
+<style>
+/* ── TRIAL BANNER ── */
+.trial-banner {
+  background: linear-gradient(90deg, #1A1815 0%, #2D2A26 100%);
+  color: #fff; padding: 10px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.trial-badge {
+  background: var(--accent); color: #fff;
+  font-size: 11px; font-weight: 800; padding: 3px 10px;
+  border-radius: 20px; letter-spacing: .5px; flex-shrink: 0;
+}
+.trial-text { font-size: 13px; color: rgba(255,255,255,.8); flex: 1; }
+.trial-cta {
+  background: #fff; color: var(--ink);
+  font-size: 12px; font-weight: 700; padding: 7px 16px;
+  border-radius: var(--r); border: none; cursor: pointer; flex-shrink: 0;
+}
+.trial-timer { font-size: 13px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+
+/* ── CONSENT MODAL ── */
+#modal-consent .modal-box { max-width: 500px; }
+.consent-program-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 16px; border-radius: 20px;
+  font-size: 13px; font-weight: 700; margin-bottom: 20px;
+}
+.consent-item {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.consent-item:last-child { border-bottom: none; }
+.consent-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.consent-item-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+.consent-item-desc { font-size: 13px; color: var(--ink3); line-height: 1.5; }
+.consent-check-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 14px 16px; background: var(--sand);
+  border-radius: var(--r); margin-top: 4px; cursor: pointer;
+}
+.consent-check-row input[type=checkbox] {
+  width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px;
+  accent-color: var(--accent); cursor: pointer;
+}
+.consent-check-label { font-size: 13px; color: var(--ink2); line-height: 1.5; cursor: pointer; }
+
+/* ── WEEK PROTOCOL ── */
+.week-protocol-card {
+  background: var(--white); border-radius: var(--r2);
+  border: 1px solid var(--border); overflow: hidden;
+}
+.week-protocol-header {
+  padding: 16px 20px; display: flex; align-items: center;
+  justify-content: space-between; border-bottom: 1px solid var(--border);
+}
+.week-badge {
+  font-size: 12px; font-weight: 700; padding: 4px 12px;
+  border-radius: 20px; display: flex; align-items: center; gap: 5px;
+}
+.week-protocol-body { padding: 0; }
+.week-protocol-item {
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 14px; cursor: pointer;
+  transition: background .12s;
+}
+.week-protocol-item:hover { background: var(--sand); }
+.week-protocol-item:last-child { border-bottom: none; }
+.wpi-num {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; flex-shrink: 0;
+}
+.wpi-info { flex: 1; }
+.wpi-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+.wpi-meta { font-size: 12px; color: var(--ink3); margin-top: 3px; }
+.wpi-status { font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.wpi-current { font-weight: 700; }
+
+/* ── PAIN TRACKER ── */
+.pain-section { padding: 20px; border-top: 1px solid var(--border); }
+.pain-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+.pain-sub { font-size: 12px; color: var(--ink3); margin-bottom: 14px; }
+.pain-scale { display: flex; gap: 6px; flex-wrap: wrap; }
+.pain-dot {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 2px solid var(--border2); background: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  color: var(--ink3); transition: all .12s;
+}
+.pain-dot:hover { border-color: var(--accent); transform: scale(1.1); }
+.pain-dot.sel-ok   { background: #3A8A5A; border-color: #3A8A5A; color: #fff; }
+.pain-dot.sel-mid  { background: #D4783A; border-color: #D4783A; color: #fff; }
+.pain-dot.sel-high { background: #C8506A; border-color: #C8506A; color: #fff; }
+.pain-note { margin-top: 12px; }
+.pain-alert-banner {
+  background: #FEF2F2; border: 1px solid #FECACA;
+  border-radius: var(--r); padding: 12px 16px;
+  font-size: 13px; color: #991B1B; display: none; margin-top: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* ── WEEKLY REPORT (Victoria → Clienta) ── */
+.weekly-report-card {
+  background: linear-gradient(135deg, var(--ink) 0%, #2D2A26 100%);
+  border-radius: var(--r2); padding: 24px; color: #fff; position: relative; overflow: hidden;
+}
+.weekly-report-card::before {
+  content: ''; position: absolute; width: 200px; height: 200px;
+  border-radius: 50%; background: rgba(255,255,255,.04);
+  top: -60px; right: -40px;
+}
+.wr-label { font-size: 11px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: rgba(255,255,255,.4); margin-bottom: 14px; }
+.wr-title { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 800;
+  color: #fff; margin-bottom: 6px; letter-spacing: -.4px; }
+.wr-sub { font-size: 13px; color: rgba(255,255,255,.6); margin-bottom: 20px; }
+.wr-metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
+.wr-metric { background: rgba(255,255,255,.08); border-radius: var(--r); padding: 14px 12px; text-align: center; }
+.wr-metric-val { font-size: 22px; font-weight: 800; color: #fff; font-family: 'Fraunces', serif; }
+.wr-metric-lbl { font-size: 10px; color: rgba(255,255,255,.4); margin-top: 4px; }
+.wr-victoria-note {
+  background: rgba(255,255,255,.08); border-radius: var(--r);
+  padding: 14px 16px; font-size: 14px; color: rgba(255,255,255,.85);
+  line-height: 1.6; border-left: 3px solid var(--accent);
+}
+.wr-victoria-sig { font-size: 12px; color: rgba(255,255,255,.4); margin-top: 8px; }
+
+/* ── VIDEOCALL BANNER ── */
+.videocall-card {
+  background: var(--white); border-radius: var(--r2);
+  border: 2px solid var(--accent); padding: 20px;
+  display: flex; align-items: center; gap: 16px;
+}
+.vc-icon {
+  width: 52px; height: 52px; border-radius: var(--r);
+  background: var(--accent-l); display: flex; align-items: center;
+  justify-content: center; font-size: 24px; flex-shrink: 0; color: var(--accent);
+}
+.vc-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.vc-sub { font-size: 13px; color: var(--ink3); margin-top: 4px; }
+.vc-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; background: var(--accent-l); color: var(--accent); margin-top: 6px; display: inline-block; }
+
+/* ── PRIVACY PAGE ── */
+.privacy-section { max-width: 760px; }
+.privacy-hero {
+  background: var(--ink); border-radius: var(--r3); padding: 32px 36px; margin-bottom: 28px; color: #fff;
+}
+.privacy-hero h1 { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 800; margin-bottom: 8px; letter-spacing: -.5px; }
+.privacy-hero p { font-size: 14px; color: rgba(255,255,255,.6); line-height: 1.6; }
+.privacy-block { background: var(--white); border-radius: var(--r2); border: 1px solid var(--border); padding: 24px; margin-bottom: 16px; }
+.privacy-block h3 { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+.privacy-block h3 i { color: var(--accent); font-size: 20px; }
+.privacy-block p, .privacy-block li { font-size: 14px; color: var(--ink2); line-height: 1.7; }
+.privacy-block ul { padding-left: 20px; margin-top: 8px; }
+.privacy-block li { margin-bottom: 6px; }
+.privacy-rights { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.privacy-right { background: var(--sand); border-radius: var(--r); padding: 14px 16px; }
+.privacy-right .pr-icon { font-size: 20px; margin-bottom: 8px; }
+.privacy-right .pr-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+.privacy-right .pr-desc { font-size: 12px; color: var(--ink3); line-height: 1.5; }
+@media(max-width:600px){ .privacy-rights{ grid-template-columns:1fr; } }
+.delete-data-btn {
+  background: #FEF2F2; color: #991B1B; border: 1.5px solid #FECACA;
+  border-radius: var(--r); padding: 12px 20px; font-size: 14px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: inherit;
+}
+.delete-data-btn:hover { background: #FEE2E2; }
+
+/* ── DOLOR ALERT COACH ── */
+.coach-alert-card {
+  background: #FEF2F2; border: 1.5px solid #FECACA;
+  border-radius: var(--r2); padding: 16px 18px;
+  display: flex; align-items: flex-start; gap: 14px;
+}
+.coach-alert-icon { font-size: 24px; flex-shrink: 0; }
+.coach-alert-name { font-size: 14px; font-weight: 700; color: #991B1B; }
+.coach-alert-desc { font-size: 13px; color: #B91C1C; margin-top: 3px; line-height: 1.5; }
+
+/* ── B2B CARD ── */
+.b2b-card {
+  background: linear-gradient(135deg, #1A5A8A, #2A7AB5);
+  border-radius: var(--r2); padding: 28px; color: #fff; overflow: hidden; position: relative;
+}
+.b2b-card::before {
+  content: ''; position: absolute; width: 200px; height: 200px;
+  border-radius: 50%; background: rgba(255,255,255,.06); top: -60px; right: -40px;
+}
+.b2b-title { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+.b2b-sub { font-size: 13px; color: rgba(255,255,255,.7); margin-bottom: 20px; line-height: 1.5; }
+.b2b-features { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.b2b-feat { display: flex; align-items: center; gap: 10px; font-size: 13px; color: rgba(255,255,255,.85); }
+.b2b-feat i { font-size: 16px; color: #7EC8F0; flex-shrink: 0; }
+</style>
+
+<!-- ════════ V5 NEW MODALS ════════ -->
+
+<!-- CONSENT MODAL -->
+<div class="modal-ov" id="modal-consent">
+  <div class="modal-box" style="max-width:500px;">
+    <div class="modal-hdr" style="padding:24px 24px 0;">
+      <span class="modal-title">Antes de comenzar</span>
+    </div>
+    <div style="padding:16px 24px 0;">
+      <div class="consent-program-badge" id="consent-badge" style="background:var(--accent-l);color:var(--accent);">
+        <span id="consent-emoji">✨</span> <span id="consent-prog">Bajar de peso</span>
+      </div>
+      <p style="font-size:13px;color:var(--ink3);margin-bottom:16px;line-height:1.6;">Rekupera recopila cierta información para que Victoria pueda diseñar y hacer seguimiento de tu programa. Necesitamos tu consentimiento explícito antes de guardar cualquier dato.</p>
+      <div class="consent-item">
+        <div class="consent-icon">📋</div>
+        <div><div class="consent-item-title">Datos personales básicos</div><div class="consent-item-desc">Nombre, email, ciudad, edad — para identificarte y personalizar tu experiencia.</div></div>
+      </div>
+      <div class="consent-item">
+        <div class="consent-icon">📏</div>
+        <div><div class="consent-item-title">Medidas corporales</div><div class="consent-item-desc">Peso, cintura, cadera, muslo — registradas por ti semana a semana para medir tu evolución.</div></div>
+      </div>
+      <div class="consent-item">
+        <div class="consent-icon">📸</div>
+        <div><div class="consent-item-title">Fotos de progreso (sensibles)</div><div class="consent-item-desc">Son datos sensibles bajo la Ley 21.719. Solo tú y Victoria pueden verlas. Se almacenan cifradas y nunca se comparten con terceros.</div></div>
+      </div>
+      <div class="consent-item">
+        <div class="consent-icon">💬</div>
+        <div><div class="consent-item-title">Mensajes con Victoria</div><div class="consent-item-desc">El historial de chat se guarda para dar continuidad al seguimiento de tu programa.</div></div>
+      </div>
+      <div class="consent-item" style="border-bottom:none;">
+        <div class="consent-icon">❤️</div>
+        <div><div class="consent-item-title">Datos de salud (nivel de dolor)</div><div class="consent-item-desc">Los registros de dolor que ingreses se comparten con Victoria para ajustar tu plan de forma segura.</div></div>
+      </div>
+    </div>
+    <div style="padding:0 24px 8px;margin-top:4px;">
+      <div class="consent-check-row" onclick="document.getElementById('cb1').click()">
+        <input type="checkbox" id="cb1" onchange="checkConsents()">
+        <label class="consent-check-label" for="cb1">Acepto que Rekupera almacene mis datos personales y de salud para el funcionamiento del programa de recuperación física guiado por Victoria Cartes Campos.</label>
+      </div>
+      <div class="consent-check-row" style="margin-top:8px;" onclick="document.getElementById('cb2').click()">
+        <input type="checkbox" id="cb2" onchange="checkConsents()">
+        <label class="consent-check-label" for="cb2">Entiendo que puedo solicitar la eliminación de mis datos en cualquier momento desde la sección de Privacidad en mi perfil.</label>
+      </div>
+      <div class="consent-check-row" style="margin-top:8px;" onclick="document.getElementById('cb3').click()">
+        <input type="checkbox" id="cb3" onchange="checkConsents()">
+        <label class="consent-check-label" for="cb3">He leído la <a href="#" onclick="event.preventDefault();closeModal('modal-consent');renderClientApp('privacidad')" style="color:var(--accent);font-weight:600;">Política de Privacidad</a> de Rekupera (Ley 21.719).</label>
+      </div>
+    </div>
+    <div style="padding:16px 24px 24px;">
+      <button class="btn-primary" id="btn-consent" onclick="acceptConsent()" disabled style="opacity:.4;">
+        <i class="ti ti-shield-check"></i> Confirmar y comenzar mi programa
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE DATA CONFIRM -->
+<div class="modal-ov" id="modal-delete-data" onclick="if(event.target===this)closeModal('modal-delete-data')">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-hdr"><span class="modal-title" style="color:#991B1B;">⚠️ Eliminar mis datos</span><button class="modal-close" onclick="closeModal('modal-delete-data')"><i class="ti ti-x"></i></button></div>
+    <div style="padding:16px 24px;">
+      <p style="font-size:14px;color:var(--ink2);line-height:1.7;margin-bottom:16px;">Esta acción eliminará permanentemente tu cuenta, medidas, fotos de progreso y mensajes. <strong>No se puede deshacer.</strong></p>
+      <p style="font-size:14px;color:var(--ink2);line-height:1.7;">De acuerdo a la Ley 21.719 de Protección de Datos Personales, tienes derecho al olvido. Procesaremos tu solicitud en un plazo máximo de 30 días hábiles.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm btn-outline" onclick="closeModal('modal-delete-data')">Cancelar</button>
+      <button class="btn-sm" style="background:#DC2626;color:#fff;border:none;border-radius:var(--r);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;" onclick="deleteAccount()">Sí, eliminar todo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+// REKUPERA V5 — INNOVATIONS ENGINE
+// ════════════════════════════════════════
+
+// ── TRIAL (1 DÍA) ──
+function initTrial() {
+  const key = 'rekupera_trial_start'
+  let start = localStorage.getItem(key)
+  if (!start) { start = Date.now().toString(); localStorage.setItem(key, start) }
+  const elapsed = Date.now() - parseInt(start)
+  const remaining = (24 * 60 * 60 * 1000) - elapsed
+  if (remaining <= 0) return null
+  return remaining
+}
+
+function trialBanner() {
+  const rem = initTrial()
+  if (!rem || PROFILE?.plan === 'pro') return ''
+  const hrs = Math.floor(rem / 3600000)
+  const mins = Math.floor((rem % 3600000) / 60000)
+  return `<div class="trial-banner">
+    <span class="trial-badge">PRUEBA GRATUITA</span>
+    <span class="trial-text">Tienes <strong>${hrs}h ${mins}min</strong> restantes en tu día de prueba.</span>
+    <span class="trial-timer" id="trial-countdown">⏱ ${hrs}:${String(mins).padStart(2,'0')}</span>
+    <button class="trial-cta" onclick="navigate_to_planes()">Suscribirse ahora →</button>
+  </div>`
+}
+
+function startTrialCountdown() {
+  setInterval(() => {
+    const rem = initTrial()
+    if (!rem) return
+    const hrs = Math.floor(rem / 3600000)
+    const mins = Math.floor((rem % 3600000) / 60000)
+    const el = document.getElementById('trial-countdown')
+    if (el) el.textContent = `⏱ ${hrs}:${String(mins).padStart(2,'0')}`
+  }, 60000)
+}
+
+function navigate_to_planes() { switchTab('planes') }
+
+// ── CONSENT ──
+function showConsentModal(prog) {
+  const p = PC[prog] || PC.peso
+  const badge = document.getElementById('consent-badge')
+  if (badge) { badge.style.background = p.al; badge.style.color = p.a }
+  const em = document.getElementById('consent-emoji'); if(em) em.textContent = p.e
+  const lb = document.getElementById('consent-prog'); if(lb) lb.textContent = p.l
+  openModal('modal-consent')
+}
+
+function checkConsents() {
+  const all = ['cb1','cb2','cb3'].every(id => document.getElementById(id)?.checked)
+  const btn = document.getElementById('btn-consent')
+  if (btn) { btn.disabled = !all; btn.style.opacity = all ? '1' : '.4' }
+}
+
+async function acceptConsent() {
+  if (!USER) return
+  await sb.from('profiles').update({ consent_at: new Date().toISOString(), consent_version: '1.0' }).eq('id', USER.id)
+  closeModal('modal-consent')
+  toast('Consentimiento registrado ✓ Bienvenida a Rekupera')
+  renderClientApp('home')
+}
+
+// ── PROTOCOL POR SEMANA ──
+function getWeekProtocol(prog, currentWeek) {
+  const protocols = {
+    embarazada: [
+      { w:1,  t:'Adaptación — movimiento suave',      meta:'20 min · respiración y caminata', done:false },
+      { w:4,  t:'Estabilización pélvica',              meta:'25 min · suelo pélvico y glúteos', done:false },
+      { w:8,  t:'Fortalecimiento funcional',           meta:'30 min · fuerza adaptada', done:false },
+      { w:12, t:'Preparación para el parto',           meta:'25 min · posiciones y respiración', done:false },
+    ],
+    postparto: [
+      { w:1,  t:'Respiración y consciencia corporal',  meta:'15 min · muy suave', done:true },
+      { w:3,  t:'Activación suelo pélvico I',          meta:'20 min · baja intensidad', done:true },
+      { w:5,  t:'Suelo pélvico II + abdomen',          meta:'25 min · progresión', done:false },
+      { w:8,  t:'Hipopresivos y core profundo',        meta:'30 min · moderada', done:false },
+      { w:12, t:'Retorno progresivo al ejercicio',     meta:'35 min · moderada-alta', done:false },
+    ],
+    lesion: [
+      { w:1,  t:'Fase aguda — movilidad pasiva',       meta:'20 min · sin dolor', done:true },
+      { w:3,  t:'Fortalecimiento isométrico',          meta:'25 min · activación muscular', done:false },
+      { w:6,  t:'Carga progresiva',                    meta:'30 min · resistencia controlada', done:false },
+      { w:10, t:'Retorno funcional al deporte',        meta:'40 min · alta demanda', done:false },
+    ],
+    mayor: [
+      { w:1,  t:'Movilidad articular y balance',       meta:'20 min · muy suave', done:true },
+      { w:4,  t:'Fuerza funcional con silla',          meta:'25 min · progresión suave', done:false },
+      { w:8,  t:'Coordinación y propiocepción',        meta:'30 min · equilibrio', done:false },
+      { w:12, t:'Mantenimiento activo',                meta:'30 min · sostenibilidad', done:false },
+    ],
+    peso: [
+      { w:1,  t:'Cardio suave + introducción',         meta:'25 min · baja intensidad', done:true },
+      { w:3,  t:'Cardio + tonificación',               meta:'35 min · moderada', done:false },
+      { w:6,  t:'Circuitos de fuerza',                 meta:'40 min · moderada-alta', done:false },
+      { w:10, t:'HIIT + fuerza avanzada',              meta:'45 min · alta', done:false },
+      { w:12, t:'Mantenimiento y estilo de vida',      meta:'40 min · sostenible', done:false },
+    ],
+  }
+  return protocols[prog] || protocols.peso
+}
+
+function renderWeekProtocol(prog, currentWeek) {
+  const p = PC[prog] || PC.peso
+  const protocol = getWeekProtocol(prog, currentWeek)
+  const items = protocol.map((item, i) => {
+    const isCurrent = currentWeek >= item.w && (i === protocol.length-1 || currentWeek < protocol[i+1]?.w)
+    const isDone = item.done
+    return `<div class="week-protocol-item ${isCurrent?'wpi-current':''}">
+      <div class="wpi-num" style="background:${isDone?p.a:isCurrent?p.al:'var(--sand2)'};color:${isDone?'#fff':isCurrent?p.a:'var(--ink3)'};">
+        ${isDone ? '<i class="ti ti-check" style="font-size:14px;"></i>' : item.w}
+      </div>
+      <div class="wpi-info">
+        <div class="wpi-title" style="${isCurrent?'color:var(--ink);font-weight:700;':''}">${item.t}</div>
+        <div class="wpi-meta">${item.meta} · Semana ${item.w}${isCurrent?' en adelante':''}</div>
+      </div>
+      <div class="wpi-status" style="color:${isDone?p.a:isCurrent?p.a:'var(--ink3)'}">
+        ${isDone ? '✓ Lista' : isCurrent ? '← Aquí' : 'Próxima'}
+      </div>
+    </div>`
+  }).join('')
+  return `<div class="week-protocol-card">
+    <div class="week-protocol-header">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--ink);">Protocolo semanal</div>
+        <div style="font-size:12px;color:var(--ink3);margin-top:2px;">Tu hoja de ruta completa — semana a semana</div>
+      </div>
+      <span class="week-badge" style="background:${p.al};color:${p.a};">${p.e} Semana ${currentWeek}</span>
+    </div>
+    <div class="week-protocol-body">${items}</div>
+  </div>`
+}
+
+// ── PAIN TRACKER ──
+let selectedPain = -1
+function renderPainTracker() {
+  const dots = Array.from({length:11},(_,i) => {
+    const cls = i<=3?'ok':i<=6?'mid':'high'
+    return `<div class="pain-dot" id="pdot-${i}" onclick="selectPain(${i})">${i}</div>`
+  }).join('')
+  return `<div class="card">
+    <div class="pain-section" style="border-top:none;">
+      <div class="pain-title">¿Cómo está tu cuerpo hoy?</div>
+      <div class="pain-sub">Victoria recibe alerta automática si el dolor supera 6/10 dos días seguidos.</div>
+      <div class="pain-scale" id="pain-scale">${dots}</div>
+      <div id="pain-alert" class="pain-alert-banner" style="display:none;">
+        <i class="ti ti-alert-triangle"></i>
+        <span>Dolor alto detectado — Victoria recibirá una alerta y revisará tu plan.</span>
+      </div>
+      <div class="pain-note" style="margin-top:12px;">
+        <textarea class="inp-field" id="pain-note" rows="2" placeholder="Nota opcional para Victoria (ej: me duele la rodilla al bajar escaleras)…" style="font-size:13px;"></textarea>
+      </div>
+      <button class="btn-sm btn-accent" style="margin-top:10px;width:100%;padding:11px;" onclick="savePain()">
+        <i class="ti ti-device-floppy"></i> Guardar registro de hoy
+      </button>
+    </div>
+  </div>`
+}
+
+function selectPain(val) {
+  selectedPain = val
+  document.querySelectorAll('.pain-dot').forEach((d,i) => {
+    d.classList.remove('sel-ok','sel-mid','sel-high')
+    if (i === val) {
+      const cls = val<=3?'sel-ok':val<=6?'sel-mid':'sel-high'
+      d.classList.add(cls)
+    }
+  })
+  const alert = document.getElementById('pain-alert')
+  if (alert) alert.style.display = val >= 7 ? 'flex' : 'none'
+}
+
+async function savePain() {
+  if (!USER || selectedPain < 0) return toast('Selecciona tu nivel de dolor primero')
+  const nota = document.getElementById('pain-note')?.value?.trim() || ''
+  await sb.from('registros_dolor').insert({ user_id: USER.id, nivel: selectedPain, nota })
+  // Alert Victoria if high pain
+  if (selectedPain >= 7) {
+    const { data: vic } = await sb.from('profiles').select('id').eq('es_victoria', true).single()
+    if (vic) {
+      const nombre = PROFILE?.nombre?.split(' ')[0] || 'Una clienta'
+      await sb.from('mensajes').insert({
+        de_id: USER.id, para_id: vic.id,
+        texto: `🚨 Alerta automática: ${nombre} registró dolor ${selectedPain}/10 hoy. ${nota ? 'Nota: ' + nota : ''}`
+      })
+    }
+  }
+  toast(selectedPain >= 7 ? '⚠️ Registro guardado. Victoria fue notificada.' : 'Registro de dolor guardado ✓')
+  selectedPain = -1
+  document.querySelectorAll('.pain-dot').forEach(d => d.classList.remove('sel-ok','sel-mid','sel-high'))
+}
+
+// ── WEEKLY REPORT ──
+function renderWeeklyReport(prog) {
+  const p = PC[prog] || PC.peso
+  return `<div class="weekly-report-card">
+    <div class="wr-label">📊 Informe semanal — Semana 1</div>
+    <div class="wr-title">Tu primera semana completada</div>
+    <div class="wr-sub">Generado por Victoria Cartes el lunes 28 de julio</div>
+    <div class="wr-metrics">
+      <div class="wr-metric"><div class="wr-metric-val">0/3</div><div class="wr-metric-lbl">Sesiones</div></div>
+      <div class="wr-metric"><div class="wr-metric-val">—</div><div class="wr-metric-lbl">Dolor prom.</div></div>
+      <div class="wr-metric"><div class="wr-metric-val">—</div><div class="wr-metric-lbl">Adherencia</div></div>
+    </div>
+    <div class="wr-victoria-note">
+      "Bienvenida al programa ${p.e}. Esta primera semana es de adaptación — no te preocupes por la intensidad, enfócate en la constancia. Cualquier duda me escribes directamente."
+    </div>
+    <div class="wr-victoria-sig">Victoria Cartes Campos · Preparadora física</div>
+  </div>`
+}
+
+// ── VIDEOCALL CARD ──
+function renderVideocallCard() {
+  return `<div class="videocall-card">
+    <div class="vc-icon"><i class="ti ti-video"></i></div>
+    <div style="flex:1;">
+      <div class="vc-title">Evaluación inicial con Victoria</div>
+      <div class="vc-sub">Videollamada de 20 min antes de comenzar tu programa. Victoria revisa tu caso y ajusta el plan.</div>
+      <span class="vc-badge"><i class="ti ti-check"></i> Incluida en Plan Pro</span>
+    </div>
+    <button class="btn-sm btn-accent" onclick="toast('Victoria coordinará tu videollamada por chat 📅')">
+      <i class="ti ti-calendar-event"></i> Agendar
+    </button>
+  </div>`
+}
+
+// ── PRIVACY PAGE ──
+function renderPrivacy(el) {
+  el.innerHTML = `<div class="privacy-section">
+    <div class="privacy-hero">
+      <h1>Política de Privacidad</h1>
+      <p>Rekupera protege tus datos bajo la Ley N° 21.719 de Protección de Datos Personales de Chile (vigente desde diciembre 2026). Última actualización: julio 2025.</p>
+    </div>
+    <div class="privacy-block">
+      <h3><i class="ti ti-user-shield"></i> ¿Qué datos recopilamos?</h3>
+      <ul>
+        <li><strong>Datos personales básicos:</strong> nombre, email, ciudad, edad — necesarios para identificarte.</li>
+        <li><strong>Datos de salud y medidas corporales:</strong> peso, cintura, cadera, muslo, nivel de dolor — considerados datos sensibles bajo la Ley 21.719.</li>
+        <li><strong>Fotos de progreso:</strong> imágenes corporales que constituyen datos biométricos sensibles. Se almacenan cifradas y solo son accesibles por ti y Victoria Cartes Campos.</li>
+        <li><strong>Mensajes:</strong> el historial de chat con Victoria se guarda para dar continuidad al seguimiento de tu programa.</li>
+        <li><strong>Datos de sesiones:</strong> registro de ejercicios completados y adherencia al programa.</li>
+      </ul>
+    </div>
+    <div class="privacy-block">
+      <h3><i class="ti ti-lock"></i> ¿Cómo protegemos tus datos?</h3>
+      <ul>
+        <li>Las fotos de progreso se almacenan en un bucket <strong>privado cifrado</strong> — no son accesibles públicamente bajo ninguna circunstancia.</li>
+        <li>El acceso a tus datos requiere autenticación con tu email y contraseña.</li>
+        <li>Los datos de salud (medidas, dolor) solo son visibles para ti y tu especialista Victoria Cartes.</li>
+        <li>No compartimos ningún dato con terceros, anunciantes ni plataformas externas.</li>
+        <li>Usamos Supabase como proveedor de base de datos, con cifrado en tránsito (TLS) y en reposo (AES-256).</li>
+      </ul>
+    </div>
+    <div class="privacy-block">
+      <h3><i class="ti ti-badge"></i> Tus derechos (Ley 21.719)</h3>
+      <div class="privacy-rights">
+        <div class="privacy-right"><div class="pr-icon">👁️</div><div class="pr-title">Acceso</div><div class="pr-desc">Puedes solicitar ver todos los datos que tenemos sobre ti en cualquier momento.</div></div>
+        <div class="privacy-right"><div class="pr-icon">✏️</div><div class="pr-title">Rectificación</div><div class="pr-desc">Puedes corregir cualquier dato incorrecto desde tu perfil o escribiéndonos.</div></div>
+        <div class="privacy-right"><div class="pr-icon">🗑️</div><div class="pr-title">Eliminación</div><div class="pr-desc">Puedes solicitar que eliminemos todos tus datos. Lo procesamos en 30 días hábiles.</div></div>
+        <div class="privacy-right"><div class="pr-icon">📦</div><div class="pr-title">Portabilidad</div><div class="pr-desc">Puedes pedir una copia de tus datos en formato legible para llevarlos a otro servicio.</div></div>
+      </div>
+    </div>
+    <div class="privacy-block">
+      <h3><i class="ti ti-mail"></i> Contacto y ejercicio de derechos</h3>
+      <p>Para ejercer cualquiera de tus derechos o hacer preguntas sobre privacidad, escríbenos a <strong>privacidad@rekupera.cl</strong> o directamente a Victoria por el chat de la plataforma.</p>
+      <div style="margin-top:16px;">
+        <button class="delete-data-btn" onclick="openModal('modal-delete-data')">
+          <i class="ti ti-trash"></i> Solicitar eliminación de todos mis datos
+        </button>
+      </div>
+    </div>
+  </div>`
+}
+
+// ── B2B CARD ──
+function renderB2BCard() {
+  return `<div class="b2b-card">
+    <div class="b2b-title">🏥 Plan Clínica — B2B</div>
+    <div class="b2b-sub">Para clínicas, kinesiólogos y CESFAM que quieren ofrecer Rekupera a sus pacientes con seguimiento de Victoria.</div>
+    <div class="b2b-features">
+      <div class="b2b-feat"><i class="ti ti-check"></i> Hasta 20 pacientes activos</div>
+      <div class="b2b-feat"><i class="ti ti-check"></i> Panel de seguimiento grupal</div>
+      <div class="b2b-feat"><i class="ti ti-check"></i> Alertas automáticas de dolor</div>
+      <div class="b2b-feat"><i class="ti ti-check"></i> Informes semanales automáticos</div>
+      <div class="b2b-feat"><i class="ti ti-check"></i> Marca blanca disponible</div>
+    </div>
+    <button class="btn-sm" style="background:#fff;color:#1A5A8A;border:none;border-radius:var(--r);padding:11px 20px;font-size:14px;font-weight:700;cursor:pointer;" onclick="toast('Te contactaremos para presentar el plan Clínica 🏥')">
+      <i class="ti ti-send"></i> Solicitar información
+    </button>
+  </div>`
+}
+
+// ── DELETE ACCOUNT ──
+async function deleteAccount() {
+  if (!USER) return
+  toast('Procesando solicitud de eliminación…')
+  // Send deletion request message to Victoria
+  const { data: vic } = await sb.from('profiles').select('id').eq('es_victoria', true).single()
+  if (vic) await sb.from('mensajes').insert({ de_id: USER.id, para_id: vic.id, texto: `📋 Solicitud de eliminación de datos: ${PROFILE?.nombre || USER.email} solicita la eliminación de todos sus datos bajo la Ley 21.719.` })
+  closeModal('modal-delete-data')
+  toast('Solicitud enviada. Victoria la procesará en 30 días hábiles.')
+  setTimeout(doLogout, 3000)
+}
+
+// ── OVERRIDE renderClientApp to inject v5 features ──
+const _origRenderClientApp = renderClientApp
+window.renderClientApp = function(active) {
+  _origRenderClientApp(active)
+  // Inject trial banner above topbar if applicable
+  setTimeout(() => {
+    const topbar = document.querySelector('.app-topbar')
+    if (topbar && !document.querySelector('.trial-banner')) {
+      const bannerHtml = trialBanner()
+      if (bannerHtml) topbar.insertAdjacentHTML('beforebegin', bannerHtml)
+    }
+    // Inject nav items for new sections
+    const nav = document.querySelector('.sidebar-nav')
+    if (nav && !document.getElementById('nav-protocolo')) {
+      nav.insertAdjacentHTML('beforeend', `
+        <div class="nav-section-label">Innovaciones</div>
+        <button class="nav-item" onclick="switchTab('protocolo')" id="nav-protocolo"><i class="ti ti-route"></i> Mi protocolo</button>
+        <button class="nav-item" onclick="switchTab('dolor')" id="nav-dolor"><i class="ti ti-heart-rate-monitor"></i> Registro de dolor</button>
+        <button class="nav-item" onclick="switchTab('privacidad')" id="nav-privacidad"><i class="ti ti-shield"></i> Mi privacidad</button>
+      `)
+    }
+    startTrialCountdown()
+  }, 100)
+}
+
+// ── OVERRIDE switchTab to handle new tabs ──
+const _origSwitchTab = switchTab
+window.switchTab = function(id, skipAnim) {
+  const newTabs = ['protocolo','dolor','privacidad','planes']
+  if (!newTabs.includes(id)) { _origSwitchTab(id, skipAnim); return }
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+  document.getElementById(`nav-${id}`)?.classList.add('active')
+  const titles = { protocolo:'Mi protocolo semanal', dolor:'Registro de dolor', privacidad:'Privacidad y datos', planes:'Planes y suscripción' }
+  const el = document.getElementById('topbar-title'); if(el) el.textContent = titles[id]||id
+  const content = document.getElementById('page-content'); if(!content) return
+
+  if (id === 'protocolo') {
+    const week = PROFILE?.semana_actual || 1
+    content.innerHTML = `
+      <div class="page-section">${renderVideocallCard()}</div>
+      <div class="page-section">
+        <div class="section-hdr"><span class="section-title">Tu protocolo — ${PC[PROG]?.e} ${PC[PROG]?.l}</span></div>
+        ${renderWeekProtocol(PROG, week)}
+      </div>
+      <div class="page-section">
+        <div class="section-hdr"><span class="section-title">Informe de Victoria</span></div>
+        ${renderWeeklyReport(PROG)}
+      </div>`
+  }
+
+  if (id === 'dolor') {
+    content.innerHTML = `
+      <div class="page-section">
+        <div class="section-hdr"><span class="section-title">Registra cómo estás hoy</span></div>
+        ${renderPainTracker()}
+      </div>
+      <div class="page-section">
+        <div class="section-hdr"><span class="section-title">Historial reciente</span></div>
+        <div class="card" id="pain-history"><div class="empty-state"><i class="ti ti-heart-rate-monitor"></i><p>Sin registros aún.<br>Empieza hoy para que Victoria vea tu evolución.</p></div></div>
+      </div>`
+    loadPainHistory()
+  }
+
+  if (id === 'privacidad') {
+    content.style.maxWidth = '800px'
+    renderPrivacy(content)
+  }
+
+  if (id === 'planes') {
+    content.innerHTML = `
+      <div class="page-section">
+        <div class="section-hdr"><span class="section-title">Elige tu plan</span></div>
+        <div class="grid-3">
+          <div class="card" style="text-align:center;">
+            <div style="font-size:32px;margin-bottom:12px;">🌱</div>
+            <div style="font-size:18px;font-weight:800;color:var(--ink);margin-bottom:6px;">Básico</div>
+            <div style="font-family:'Fraunces',serif;font-size:32px;font-weight:800;color:var(--ink);">$7.990</div>
+            <div style="font-size:13px;color:var(--ink3);margin-bottom:16px;">/mes</div>
+            <hr style="border:none;border-top:1px solid var(--border);margin-bottom:16px;">
+            <div style="text-align:left;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--ink2);">
+              <div>✅ 1 programa activo</div><div>✅ Videos de ejercicios</div>
+              <div>✅ Protocolo semanal</div><div>✅ Registro de dolor</div>
+              <div>❌ Chat con Victoria</div><div>❌ Videollamada inicial</div>
+              <div>❌ Informe semanal</div>
+            </div>
+            <button class="btn-sm btn-outline" style="width:100%;margin-top:16px;padding:12px;" onclick="toast('Iniciando suscripción Básico…')">Elegir Básico</button>
+          </div>
+          <div class="card" style="text-align:center;border:2px solid var(--accent);position:relative;">
+            <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:11px;font-weight:800;padding:4px 14px;border-radius:20px;white-space:nowrap;">MÁS ELEGIDO</div>
+            <div style="font-size:32px;margin-bottom:12px;">⭐</div>
+            <div style="font-size:18px;font-weight:800;color:var(--ink);margin-bottom:6px;">Pro</div>
+            <div style="font-family:'Fraunces',serif;font-size:32px;font-weight:800;color:var(--accent);">$14.990</div>
+            <div style="font-size:13px;color:var(--ink3);margin-bottom:16px;">/mes</div>
+            <hr style="border:none;border-top:1px solid var(--border);margin-bottom:16px;">
+            <div style="text-align:left;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--ink2);">
+              <div>✅ Todos los programas</div><div>✅ Videos de ejercicios</div>
+              <div>✅ Protocolo semana exacta</div><div>✅ Registro de dolor + alertas</div>
+              <div>✅ Chat directo con Victoria</div><div>✅ Videollamada inicial</div>
+              <div>✅ Informe semanal automático</div>
+            </div>
+            <button class="btn-sm btn-accent" style="width:100%;margin-top:16px;padding:12px;" onclick="toast('Iniciando suscripción Pro…')">Elegir Pro</button>
+          </div>
+          <div>${renderB2BCard()}</div>
+        </div>
+      </div>
+      <div class="page-section">
+        <div class="section-hdr"><span class="section-title">Prueba gratuita</span></div>
+        <div class="card" style="display:flex;align-items:center;gap:16px;">
+          <div style="font-size:36px;">⏱</div>
+          <div style="flex:1;">
+            <div style="font-size:15px;font-weight:700;color:var(--ink);">1 día de prueba gratuita</div>
+            <div style="font-size:13px;color:var(--ink3);margin-top:4px;line-height:1.6;">Tienes 24 horas para explorar la plataforma completa. Al terminar, elige el plan que más te convenga. Sin compromiso.</div>
+          </div>
+          <div id="planes-timer" style="font-size:18px;font-weight:800;color:var(--accent);flex-shrink:0;"></div>
+        </div>
+      </div>`
+    // Show timer
+    const rem = initTrial()
+    const timerEl = document.getElementById('planes-timer')
+    if (timerEl && rem) {
+      const hrs = Math.floor(rem/3600000), mins = Math.floor((rem%3600000)/60000)
+      timerEl.textContent = `${hrs}h ${mins}m`
+    }
+  }
+}
+
+// ── PAIN HISTORY ──
+async function loadPainHistory() {
+  if (!USER) return
+  const { data } = await sb.from('registros_dolor').select('*').eq('user_id', USER.id).order('created_at', { ascending:false }).limit(7)
+  const el = document.getElementById('pain-history'); if (!el) return
+  if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state"><i class="ti ti-heart-rate-monitor"></i><p>Sin registros aún.<br>Empieza hoy para que Victoria vea tu evolución.</p></div>'; return }
+  el.innerHTML = '<div style="padding:0;">' + data.map(r => {
+    const d = new Date(r.created_at)
+    const fecha = d.toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' })
+    const color = r.nivel <= 3 ? '#3A8A5A' : r.nivel <= 6 ? '#D4783A' : '#C8506A'
+    const emoji = r.nivel <= 3 ? '😊' : r.nivel <= 6 ? '😐' : '😓'
+    return `<div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;">
+      <div style="width:44px;height:44px;border-radius:50%;background:${color}20;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:${color};flex-shrink:0;">${r.nivel}</div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--ink);">${emoji} Dolor ${r.nivel}/10</div><div style="font-size:12px;color:var(--ink3);margin-top:2px;">${fecha}</div>${r.nota?`<div style="font-size:12px;color:var(--ink2);margin-top:4px;font-style:italic;">"${r.nota}"</div>`:''}</div>
+    </div>`
+  }).join('') + '</div>'
+}
+
+// ── COACH: ALERTAS DE DOLOR ──
+async function loadCoachAlerts() {
+  if (!USER) return []
+  const yesterday = new Date(Date.now() - 48*60*60*1000).toISOString()
+  const { data } = await sb.from('registros_dolor').select('*, profiles(nombre)').gte('created_at', yesterday).gte('nivel', 7).order('created_at', { ascending:false })
+  return data || []
+}
+
+// ── OVERRIDE renderCoachDash to add alerts ──
+const _origRenderCoachDash = renderCoachDash
+window.renderCoachDash = async function(el) {
+  _origRenderCoachDash(el)
+  const alerts = await loadCoachAlerts()
+  if (alerts.length > 0) {
+    const alertsHtml = alerts.map(a => `
+      <div class="coach-alert-card">
+        <div class="coach-alert-icon">🚨</div>
+        <div>
+          <div class="coach-alert-name">${a.profiles?.nombre || 'Clienta'} — Dolor ${a.nivel}/10</div>
+          <div class="coach-alert-desc">${a.nota || 'Sin nota adicional'} · ${new Date(a.created_at).toLocaleDateString('es-CL')}</div>
+          <button class="btn-sm btn-accent" style="margin-top:8px;font-size:12px;" onclick="openCoachChat('${a.user_id}')"><i class="ti ti-message-circle"></i> Responder ahora</button>
+        </div>
+      </div>`).join('')
+    const sec = document.createElement('div')
+    sec.className = 'page-section'
+    sec.innerHTML = `<div class="section-hdr"><span class="section-title" style="color:#991B1B;">⚠️ Alertas de dolor activas</span></div>${alertsHtml}`
+    el.insertBefore(sec, el.firstChild)
+  }
+}
+
+// ── SQL HINT: tabla registros_dolor ──
+// Ejecutar en Supabase SQL Editor:
+// CREATE TABLE IF NOT EXISTS registros_dolor (
+//   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+//   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+//   nivel INTEGER CHECK (nivel >= 0 AND nivel <= 10),
+//   nota TEXT,
+//   created_at TIMESTAMPTZ DEFAULT NOW()
+// );
+// ALTER TABLE registros_dolor ENABLE ROW LEVEL SECURITY;
+// CREATE POLICY "rd_select" ON registros_dolor FOR SELECT TO authenticated USING (auth.uid()=user_id OR EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND es_victoria=TRUE));
+// CREATE POLICY "rd_insert" ON registros_dolor FOR INSERT TO authenticated WITH CHECK (auth.uid()=user_id);
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS consent_at TIMESTAMPTZ;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS consent_version TEXT;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'trial';
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS semana_actual INTEGER DEFAULT 1;
+</script>
+<style>
+/* ── MOTIVATION & PRESENCE SYSTEM ── */
+.presence-banner {
+  background: linear-gradient(135deg, #1A1815 0%, #2A2724 100%);
+  border-radius: var(--r2);
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255,255,255,0.06);
+  position: relative;
+  overflow: hidden;
+}
+.presence-banner::before {
+  content: '';
+  position: absolute;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(200,80,106,0.15) 0%, transparent 70%);
+  top: -60px; right: -40px;
+  pointer-events: none;
+}
+.presence-av {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800; color: #fff;
+  flex-shrink: 0; position: relative;
+}
+.presence-pulse {
+  position: absolute; inset: -3px; border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: presence-ring 2s ease-out infinite;
+}
+@keyframes presence-ring {
+  0%   { transform: scale(1); opacity: .8; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.presence-online-dot {
+  width: 12px; height: 12px; background: #22C55E;
+  border-radius: 50%; border: 2.5px solid #1A1815;
+  position: absolute; bottom: 1px; right: 1px;
+}
+.presence-text { flex: 1; }
+.presence-name { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+.presence-msg { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.5; }
+.presence-cta {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: var(--r); padding: 9px 16px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  flex-shrink: 0; display: flex; align-items: center; gap: 6px;
+  font-family: inherit; transition: opacity .15s;
+}
+.presence-cta:hover { opacity: .88; }
+
+/* Motivational quote card */
+.quote-card {
+  background: var(--white);
+  border-radius: var(--r2);
+  border: 1px solid var(--border);
+  padding: 22px 24px;
+  position: relative;
+  overflow: hidden;
+}
+.quote-accent-line {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--accent);
+  border-radius: 4px 0 0 4px;
+}
+.quote-icon { font-size: 22px; margin-bottom: 10px; }
+.quote-text {
+  font-size: 16px; font-weight: 600; color: var(--ink);
+  line-height: 1.6; font-style: italic; margin-bottom: 8px;
+}
+.quote-author { font-size: 12px; color: var(--ink3); font-weight: 600; }
+
+/* Streak card */
+.streak-card {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--rose-d) 100%);
+  border-radius: var(--r2);
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #fff;
+}
+.streak-num {
+  font-family: 'Fraunces', serif;
+  font-size: 48px; font-weight: 800;
+  color: #fff; line-height: 1;
+  flex-shrink: 0;
+}
+.streak-label { font-size: 14px; font-weight: 700; color: #fff; }
+.streak-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 4px; line-height: 1.5; }
+.streak-fire { font-size: 36px; margin-left: auto; flex-shrink: 0; }
+
+/* Progress milestone */
+.milestone-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--white);
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.milestone-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.milestone-text { font-size: 13px; font-weight: 600; color: var(--ink); flex: 1; }
+.milestone-sub { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+.milestone-check {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Victoria tip bubble */
+.vic-tip {
+  background: var(--white);
+  border-radius: var(--r2);
+  border: 1px solid var(--border);
+  padding: 18px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.vic-tip-av {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--ink); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+  position: relative;
+}
+.vic-tip-online {
+  width: 10px; height: 10px; background: #22C55E;
+  border-radius: 50%; border: 2px solid var(--white);
+  position: absolute; bottom: 0; right: 0;
+}
+.vic-tip-name { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 5px; }
+.vic-tip-msg {
+  font-size: 14px; color: var(--ink2); line-height: 1.6;
+  background: var(--sand);
+  border-radius: 0 16px 16px 16px;
+  padding: 12px 14px;
+}
+.vic-tip-time { font-size: 11px; color: var(--ink3); margin-top: 6px; }
+
+/* Section divider */
+.sec-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 24px 0 16px;
+}
+.sec-divider-line { flex: 1; height: 1px; background: var(--border); }
+.sec-divider-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--ink3);
+}
+</style>
+
+<script>
+// ════════════════════════════════════════════════════
+// REKUPERA — MOTIVATION & PRESENCE SYSTEM
+// ════════════════════════════════════════════════════
+
+const MOTIVATION_QUOTES = [
+  { text: "El dolor que sientes hoy es la fuerza que sentirás mañana.", author: "— Victoria Cartes" },
+  { text: "No se trata de ser perfecta. Se trata de ser constante.", author: "— Victoria Cartes" },
+  { text: "Cada sesión que completas es una promesa que te cumples a ti misma.", author: "— Victoria Cartes" },
+  { text: "Tu cuerpo sabe cómo recuperarse. Solo necesita que confíes en el proceso.", author: "— Victoria Cartes" },
+  { text: "Pequeños pasos todos los días construyen grandes cambios.", author: "— Victoria Cartes" },
+  { text: "No compares tu semana 1 con el resultado final de otra persona.", author: "— Victoria Cartes" },
+  { text: "La constancia es más poderosa que la intensidad.", author: "— Victoria Cartes" },
+]
+
+const VIC_TIPS = {
+  embarazada: [
+    "Recuerda hidratarte bien antes, durante y después de cada sesión. Tu cuerpo trabaja el doble ahora. 💧",
+    "Escucha siempre a tu cuerpo. Si algo duele, me avisas de inmediato. Estoy aquí. 🙏",
+    "La respiración es tu mejor herramienta en esta etapa. Nunca la descuides.",
+  ],
+  postparto: [
+    "La recuperación del suelo pélvico es un proceso, no una carrera. Ve a tu ritmo. 💛",
+    "Si sientes presión hacia abajo durante algún ejercicio, detente y avísame. ¡Eso es exactamente para lo que estoy aquí!",
+    "Esta semana enfócate en la constancia, no en la intensidad. Cada sesión cuenta.",
+  ],
+  lesion: [
+    "El dolor no tiene que ser tu compañero. Si supera 4/10, para la sesión y escríbeme. 📩",
+    "La rehabilitación va en espiral, no en línea recta. Hay días mejores y peores, y eso es completamente normal.",
+    "Confía en el proceso. Tu cuerpo tiene memoria muscular y volverá a donde estaba. 💪",
+  ],
+  mayor: [
+    "El objetivo no es hacer mucho. El objetivo es moverse bien. ¡Eso es lo que más importa!",
+    "Cada ejercicio que completas es una inversión en tu calidad de vida. Eso no tiene precio.",
+    "¿Cómo están las rodillas hoy? Cuéntame cómo te sientes antes de empezar.",
+  ],
+  peso: [
+    "El cambio físico que buscas es consecuencia. La constancia es la causa. 🔥",
+    "No te peses todos los días. Las medidas son más honestas que la balanza.",
+    "Esta semana te veo más fuerte. Los datos de tu progreso lo confirman. ¡Sigue así! 📊",
+  ],
+}
+
+function getMotivationQuote() {
+  const idx = new Date().getDay() % MOTIVATION_QUOTES.length
+  return MOTIVATION_QUOTES[idx]
+}
+
+function getVicTip(prog) {
+  const tips = VIC_TIPS[prog] || VIC_TIPS.peso
+  return tips[new Date().getDate() % tips.length]
+}
+
+function getStreakDays() {
+  // Simulate streak based on trial start
+  const start = localStorage.getItem('rekupera_trial_start')
+  if (!start) return 1
+  const days = Math.floor((Date.now() - parseInt(start)) / (86400000)) + 1
+  return Math.min(days, 30)
+}
+
+function renderPresenceBanner(prog) {
+  const p = PC[prog] || PC.peso
+  const h = new Date().getHours()
+  const msg = h < 12
+    ? `Buenos días. Revisé tu progreso esta mañana y veo una evolución muy positiva. Tu sesión de hoy está lista. 💪`
+    : h < 19
+    ? `Buenas tardes. Hoy es un buen día para completar tu sesión. Estoy aquí si necesitas ajustar algo antes de empezar.`
+    : `Buenas noches. Si completaste tu sesión hoy, ¡felicitaciones! Recuerda hidratarte bien antes de dormir.`
+
+  return `
+  <div class="presence-banner">
+    <div class="presence-av">
+      VC
+      <div class="presence-pulse"></div>
+      <div class="presence-online-dot"></div>
+    </div>
+    <div class="presence-text">
+      <div class="presence-name">Victoria Cartes está contigo</div>
+      <div class="presence-msg">${msg}</div>
+    </div>
+    <button class="presence-cta" onclick="switchTab('chat')">
+      <i class="ti ti-message-circle"></i> Escribirle
+    </button>
+  </div>`
+}
+
+function renderVicTipBubble(prog) {
+  const tip = getVicTip(prog)
+  const h = new Date().getHours()
+  const timeLabel = h < 12 ? 'Esta mañana' : h < 19 ? 'Esta tarde' : 'Esta noche'
+  return `
+  <div class="vic-tip">
+    <div class="vic-tip-av">VC<div class="vic-tip-online"></div></div>
+    <div style="flex:1;">
+      <div class="vic-tip-name">Victoria Cartes · <span style="color:var(--ink3);font-weight:400;">${timeLabel}</span></div>
+      <div class="vic-tip-msg">${tip}</div>
+      <div class="vic-tip-time">Mensaje de tu especialista · Responde si tienes dudas</div>
+    </div>
+  </div>`
+}
+
+function renderStreakCard(prog) {
+  const streak = getStreakDays()
+  const p = PC[prog] || PC.peso
+  const msg = streak === 1
+    ? `¡Bienvenida! Hoy empiezas tu proceso de recuperación.`
+    : streak < 7
+    ? `¡Llevas ${streak} días activa! Estás construyendo el hábito más importante.`
+    : `¡Increíble! ${streak} días de constancia. Eso ya es un logro enorme.`
+  return `
+  <div class="streak-card">
+    <div>
+      <div class="streak-num">${streak}</div>
+    </div>
+    <div>
+      <div class="streak-label">Días activa en Rekupera</div>
+      <div class="streak-sub">${msg}</div>
+    </div>
+    <div class="streak-fire">${streak >= 7 ? '🔥' : streak >= 3 ? '⚡' : '🌱'}</div>
+  </div>`
+}
+
+function renderQuoteCard() {
+  const q = getMotivationQuote()
+  return `
+  <div class="quote-card">
+    <div class="quote-accent-line"></div>
+    <div style="padding-left:8px;">
+      <div class="quote-icon">💬</div>
+      <div class="quote-text">"${q.text}"</div>
+      <div class="quote-author">${q.author}</div>
+    </div>
+  </div>`
+}
+
+function renderMilestones(prog, sem) {
+  const p = PC[prog] || PC.peso
+  const milestones = [
+    { label: 'Primera sesión completada', sub: 'El inicio es lo más difícil', done: true, icon: '🎯' },
+    { label: 'Primera semana activa', sub: '3 sesiones seguidas', done: sem >= 2, icon: '📅' },
+    { label: 'Primeras medidas registradas', sub: 'Tu punto de partida queda registrado', done: false, icon: '📏' },
+    { label: 'Semana 4 alcanzada', sub: 'El cuerpo empieza a adaptarse', done: sem >= 4, icon: '💪' },
+    { label: 'Primera foto de progreso', sub: 'Ver el cambio semana a semana', done: false, icon: '📸' },
+  ]
+  return milestones.map(m => `
+    <div class="milestone-row">
+      <div class="milestone-icon">${m.icon}</div>
+      <div style="flex:1;">
+        <div class="milestone-text" style="color:${m.done?'var(--ink)':'var(--ink3)'};">${m.label}</div>
+        <div class="milestone-sub">${m.sub}</div>
+      </div>
+      <div class="milestone-check" style="background:${m.done?p.al:'var(--sand2)'};">
+        <i class="ti ${m.done?'ti-check':'ti-lock'}" style="font-size:12px;color:${m.done?p.a:'var(--ink3)'}"></i>
+      </div>
+    </div>`).join('')
+}
+
+// ── OVERRIDE renderHome to inject motivation system ──
+const _origRenderHome = renderHome
+window.renderHome = function(el) {
+  const p = PC[PROG] || PC.peso
+  const nom = (PROFILE?.nombre || 'Bienvenida').split(' ')[0]
+  const sem = PROFILE?.semana_actual || 1
+  const today = new Date(), days = ['L','M','X','J','V','S','D']
+
+  const strip = Array.from({length:7},(_,i) => {
+    const d = new Date(today); d.setDate(today.getDate()-today.getDay()+(i===6?0:i+1))
+    const isToday = d.toDateString()===today.toDateString()
+    const isPast  = d < today && !isToday
+    return `<div class="wday ${isPast?'done':''} ${isToday?'today':''}"><span class="wd">${days[i]}</span><span class="wn">${d.getDate()}</span></div>`
+  }).join('')
+
+  const s = SESSIONS[PROG] || SESSIONS.peso
+
+  el.innerHTML = `
+  ${renderPresenceBanner(PROG)}
+
+  <div class="hero-banner" style="background:${p.g};">
+    <div>
+      <div class="hero-greeting">Buenos días ☀️</div>
+      <div class="hero-name">${nom}</div>
+      <div class="hero-prog">${p.e} ${p.l} · Semana ${sem} de 12</div>
+    </div>
+    <svg class="hero-ring" viewBox="0 0 80 80">
+      <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="6"/>
+      <circle cx="40" cy="40" r="34" fill="none" stroke="#fff" stroke-width="6"
+        stroke-dasharray="213.6" stroke-dashoffset="${213.6 - (213.6 * Math.min(((sem-1)/12), 1))}"
+        stroke-linecap="round" transform="rotate(-90 40 40)"/>
+      <text x="40" y="45" text-anchor="middle" fill="white" font-size="14" font-weight="800" font-family="Inter">${Math.round(((sem-1)/12)*100)}%</text>
+    </svg>
+  </div>
+
+  ${renderStreakCard(PROG)}
+
+  <div class="sec-divider"><div class="sec-divider-line"></div><div class="sec-divider-label">Tu sesión de hoy</div><div class="sec-divider-line"></div></div>
+
+  <div class="session-card" style="margin-bottom:20px;">
+    <div class="session-card-header">
+      <div class="session-icon" style="background:${p.al};color:${p.a};"><i class="ti ti-flame"></i></div>
+      <div>
+        <div class="session-title">${s.title}</div>
+        <div class="session-meta">${s.meta} · Semana ${sem}</div>
+        <div style="margin-top:8px;display:flex;gap:6px;">
+          <span class="tag" style="background:${p.al};color:${p.a};">Hoy</span>
+          <span class="tag" style="background:var(--sand2);color:var(--ink3);">Semana ${sem}</span>
+        </div>
+      </div>
+    </div>
+    <div class="exercise-list">
+      ${s.exs.map((e,i)=>`<div class="exercise-row">
+        <div class="ex-num" style="background:${p.al};color:${p.a};">${i+1}</div>
+        <span class="ex-name">${e[0]}</span>
+        <span class="ex-sets">${e[1]}</span>
+      </div>`).join('')}
+    </div>
+    <div style="padding:0 22px 22px;display:flex;gap:10px;">
+      <button class="btn-sm btn-accent" style="flex:1;padding:13px;font-size:14px;" onclick="toast('¡Sesión iniciada! 💪 Victoria está al tanto.')">
+        <i class="ti ti-player-play"></i> Comenzar sesión
+      </button>
+      <button class="btn-sm btn-outline" style="padding:13px 16px;" onclick="switchTab('videos')">
+        <i class="ti ti-video"></i> Ver videos
+      </button>
+    </div>
+  </div>
+
+  <div class="sec-divider"><div class="sec-divider-line"></div><div class="sec-divider-label">Mensaje de Victoria</div><div class="sec-divider-line"></div></div>
+
+  ${renderVicTipBubble(PROG)}
+
+  <div class="sec-divider"><div class="sec-divider-line"></div><div class="sec-divider-label">Esta semana</div><div class="sec-divider-line"></div></div>
+
+  <div class="card" style="padding:18px 20px;margin-bottom:20px;">
+    <div class="week-strip">${strip}</div>
+  </div>
+
+  <div class="sec-divider"><div class="sec-divider-line"></div><div class="sec-divider-label">Tu progreso</div><div class="sec-divider-line"></div></div>
+
+  ${renderQuoteCard()}
+
+  <div style="margin-top:16px;margin-bottom:20px;">
+    ${renderMilestones(PROG, sem)}
+  </div>
+
+  <div class="sec-divider"><div class="sec-divider-line"></div><div class="sec-divider-label">Tu especialista</div><div class="sec-divider-line"></div></div>
+
+  <div class="card" style="cursor:pointer;margin-bottom:24px;" onclick="switchTab('chat')">
+    <div style="padding:18px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);">
+      <div style="position:relative;flex-shrink:0;">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;">VC</div>
+        <div style="width:14px;height:14px;background:#22C55E;border-radius:50%;border:2.5px solid var(--white);position:absolute;bottom:1px;right:1px;"></div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:16px;font-weight:800;color:var(--ink);">Victoria Cartes Campos</div>
+        <div style="font-size:13px;color:var(--ink3);margin-top:2px;">Preparadora física · Chillán, Chile</div>
+        <div style="font-size:13px;color:#22C55E;font-weight:600;margin-top:4px;display:flex;align-items:center;gap:5px;">
+          <div style="width:7px;height:7px;background:#22C55E;border-radius:50%;"></div>
+          En línea ahora · responde en &lt;2 hrs
+        </div>
+      </div>
+    </div>
+    <div style="padding:14px 20px;display:flex;gap:8px;">
+      <button class="btn-sm btn-accent" style="flex:1;padding:11px;justify-content:center;" onclick="event.stopPropagation();switchTab('chat')">
+        <i class="ti ti-message-circle"></i> Escribirle a Victoria
+      </button>
+      <button class="btn-sm btn-outline" style="padding:11px 14px;" onclick="event.stopPropagation();toast('Victoria coordinará tu videollamada por chat 📅')">
+        <i class="ti ti-video"></i>
+      </button>
+    </div>
+  </div>`
+}
+
+// Auto-refresh presence message every 5 min
+setInterval(() => {
+  const pb = document.querySelector('.presence-msg')
+  if (pb) {
+    const h = new Date().getHours()
+    pb.style.opacity = '0'
+    setTimeout(() => {
+      pb.style.opacity = '1'
+    }, 300)
+  }
+}, 300000)
+</script>
